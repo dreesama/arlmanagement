@@ -153,9 +153,9 @@ export const GuestLanding: React.FC<GuestLandingProps> = ({ onGoToAdmin }) => {
         <div className="flex items-center gap-3">
           <Logo size={32} className="shrink-0" />
           <div>
-            <h1 className="text-base font-extrabold tracking-tight text-[#111111] flex items-center gap-1.5">
+            <h1 className="text-base font-extrabold tracking-tight text-[#111111] flex items-center gap-1.5 font-sans">
               ARL's Hotel
-              <span className="px-2 py-0.2 bg-[#AE9170]/15 text-[#AE9170] text-[9px] font-bold rounded uppercase tracking-widest border border-[#AE9170]/30">
+              <span className="px-2 py-0.2 bg-[#AE9170]/15 text-[#AE9170] text-[9px] font-bold rounded uppercase tracking-widest border border-[#AE9170]/30 font-sans">
                 LUXURY
               </span>
             </h1>
@@ -167,7 +167,7 @@ export const GuestLanding: React.FC<GuestLandingProps> = ({ onGoToAdmin }) => {
 
         <div className="flex items-center gap-4">
           <div className="hidden md:flex items-center gap-2 px-4 py-1.5 bg-black/5 rounded-full text-xs font-semibold text-[#333333]">
-            <Sun className="w-3.5 h-3.5 text-[#D97706]" /> 26°C Clear • Tokyo / Manila
+            <Sun className="w-3.5 h-3.5 text-[#D97706]" /> 26°C Clear • Manila
           </div>
 
           <button
@@ -197,7 +197,7 @@ export const GuestLanding: React.FC<GuestLandingProps> = ({ onGoToAdmin }) => {
           {/* Left Text Column */}
           <div className="lg:col-span-7 space-y-6 text-left">
             <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-white/10 backdrop-blur-md border border-white/20 text-xs font-bold text-[#AE9170] shadow-lg">
-              <Sparkles className="w-4 h-4 text-[#AE9170]" /> Oceanfront Japanese Minimalist Retreat
+              <Sparkles className="w-4 h-4 text-[#AE9170]" /> 5-Star Luxury Oceanfront Resort & Spa
             </div>
 
             <h2 className="text-4xl sm:text-6xl font-black tracking-tight leading-[1.1] text-white">
@@ -205,7 +205,7 @@ export const GuestLanding: React.FC<GuestLandingProps> = ({ onGoToAdmin }) => {
             </h2>
 
             <p className="text-base text-white/80 font-medium max-w-xl leading-relaxed">
-              Experience handcrafted shoji suites, tatami relaxation sanctuaries, organic cotton duvets, and 24/7 personalized concierge service.
+              Experience handcrafted luxury suites, relaxation sanctuaries, organic cotton duvets, and 24/7 personalized concierge service.
             </p>
           </div>
 
@@ -289,7 +289,7 @@ export const GuestLanding: React.FC<GuestLandingProps> = ({ onGoToAdmin }) => {
                     </div>
 
                     <p className="text-xs text-[#666666] line-clamp-2 font-medium leading-relaxed">
-                      {room.description || 'Pristine Japandi guest suite with premium organic linens and rain shower.'}
+                      {room.description || 'Pristine luxury guest suite with premium organic linens and rain shower.'}
                     </p>
 
                     {/* Amenities */}
@@ -506,7 +506,7 @@ export const GuestLanding: React.FC<GuestLandingProps> = ({ onGoToAdmin }) => {
         <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
           <div className="flex items-center gap-2">
             <Logo size={20} />
-            <span>© 2026 ARL's Hotel — Luxury Japanese Minimalist Retreat. All rights reserved.</span>
+            <span>© 2026 ARL's Hotel — Luxury Resort & Spa. All rights reserved.</span>
           </div>
           <button
             onClick={onGoToAdmin}

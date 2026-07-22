@@ -19,10 +19,11 @@
 /* Hide default cursor to enable custom Figma SVG cursor */
 *, *::before, *::after {
   cursor: none !important;
+  font-family: 'Montserrat', system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
 }
 
-body {
-  font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+html, body {
+  font-family: 'Montserrat', system-ui, -apple-system, BlinkMacSystemFont, sans-serif !important;
   background-color: var(--japandi-bg);
   color: var(--japandi-sumi-ink);
   overflow-x: hidden;
@@ -59,6 +60,7 @@ body {
   color: #1C1B18;
   font-size: 0.8125rem;
   transition: border-color 0.15s ease, box-shadow 0.15s ease;
+  font-family: 'Montserrat', sans-serif;
 }
 
 .zen-input:focus {
@@ -85,6 +87,7 @@ select option {
   color: #1C1B18;
   padding: 8px 12px;
   font-weight: 500;
+  font-family: 'Montserrat', sans-serif;
 }
 
 /* Primary Crimson Stamp Button */
