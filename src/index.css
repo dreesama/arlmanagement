@@ -117,9 +117,7 @@ select option {
   border-color: #C7C0B3;
 }
 
-/* ------------------------------------------------------------- */
-/* CUSTOM COLORED JAPANDI SCROLLBAR */
-/* ------------------------------------------------------------- */
+/* Custom Colored Scrollbar */
 ::-webkit-scrollbar {
   width: 8px;
   height: 8px;
@@ -137,10 +135,27 @@ select option {
   background: #B43F27;
 }
 
+/* ------------------------------------------------------------- */
+/* PRINTING CSS RULES FOR OFFICIAL BILLING FOLIO */
+/* ------------------------------------------------------------- */
 @media print {
-  body {
-    background-color: white !important;
+  body * {
+    visibility: hidden;
+  }
+  #printable-invoice, #printable-invoice * {
+    visibility: visible;
+  }
+  #printable-invoice {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    margin: 0;
+    padding: 20px;
+    background: white !important;
     color: black !important;
+    border: none !important;
+    box-shadow: none !important;
   }
   .no-print {
     display: none !important;

@@ -1,15 +1,32 @@
 import React, { useEffect, useState } from 'react';
-import { CreditCard, Printer, Download, Plus, Search, CheckCircle, Building2 } from 'lucide-react';
+import {
+  CreditCard,
+  Printer,
+  Download,
+  Plus,
+  Search,
+  CheckCircle,
+  Building2,
+  DollarSign,
+  TrendingUp,
+  AlertCircle,
+  FileText,
+  Clock,
+  UserCheck,
+  Percent,
+} from 'lucide-react';
 import { Billing, BillingItem, PaymentMethod } from '../types';
 import { api } from '../lib/api';
 import { formatCurrency, formatDate, formatDateTime, getPaymentStatusBadge } from '../lib/utils';
 import { exportElementToPDF, exportToExcel, printInvoice } from '../utils/exports';
 import { Modal } from '../components/ui/Modal';
+import { Logo } from '../components/ui/Logo';
 
 export const BillingPage: React.FC = () => {
   const [billings, setBillings] = useState<Billing[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
+  const [statusFilter, setStatusFilter] = useState<string>('All');
   const [selectedInvoice, setSelectedInvoice] = useState<Billing | null>(null);
 
   // Payment Recording Modal
@@ -122,13 +139,19 @@ export const BillingPage: React.FC = () => {
     }
   };
 
+  // Financial KPI Aggregation
+  const totalBilledRevenue = billings.reduce((sum, b) => sum + b.grandTotal, 0);
+  const totalPaidCollections = billings.reduce((sum, b) => sum + b.paidAmount, 0);
+  const totalOutstandingBalance = billings.reduce((sum, b) => sum + b.balanceAmount, 0);
+
   const filteredBillings = billings.filter((b) => {
     const q = searchQuery.toLowerCase();
-    return (
+    const matchesSearch =
       b.invoiceNumber.toLowerCase().includes(q) ||
       b.guestName.toLowerCase().includes(q) ||
-      b.roomNumber.toLowerCase().includes(q)
-    );
+      b.roomNumber.toLowerCase().includes(q);
+    const matchesStatus = statusFilter === 'All' || b.status === statusFilter;
+    return matchesSearch && matchesStatus;
   });
 
   const handleExportExcel = () => {
@@ -156,7 +179,7 @@ export const BillingPage: React.FC = () => {
       <div className="zen-card p-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div>
           <h2 className="text-lg font-bold text-[#1C1B18] tracking-tight">Billing & Payment Settlement</h2>
-          <p className="text-xs text-[#6E6B65] font-medium">Automatic computation for VAT, service charges, discounts & payments</p>
+          <p className="text-xs text-[#6E6B65] font-medium">Automatic tax calculation, discounts, payment records & printable folios</p>
         </div>
         <div className="flex items-center gap-3">
           <button
@@ -168,62 +191,130 @@ export const BillingPage: React.FC = () => {
         </div>
       </div>
 
-      {/* Main Grid: Left Invoices List, Right Invoice Statement */}
+      {/* Summary KPI Financial Analytics Bar */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="zen-card p-4 space-y-1 bg-white border-[#E5E0D8]">
+          <div className="text-[11px] font-bold text-[#6E6B65] uppercase flex items-center justify-between">
+            <span>Total Invoiced Revenue</span>
+            <DollarSign className="w-4 h-4 text-[#C84B31]" />
+          </div>
+          <div className="text-xl font-extrabold text-[#1C1B18]">{formatCurrency(totalBilledRevenue)}</div>
+          <div className="text-[10px] text-[#6E6B65] font-medium">{billings.length} total folios issued</div>
+        </div>
+
+        <div className="zen-card p-4 space-y-1 bg-[#EBF5EF] border-[#BCE3C8]">
+          <div className="text-[11px] font-bold text-[#2D5A39] uppercase flex items-center justify-between">
+            <span>Paid Collections</span>
+            <CheckCircle className="w-4 h-4 text-[#4A7C59]" />
+          </div>
+          <div className="text-xl font-extrabold text-[#2D5A39]">{formatCurrency(totalPaidCollections)}</div>
+          <div className="text-[10px] text-[#2D5A39]/80 font-bold">Settled cash, card & GCash</div>
+        </div>
+
+        <div className="zen-card p-4 space-y-1 bg-[#FEF7EC] border-[#FCE1B6]">
+          <div className="text-[11px] font-bold text-[#9A6208] uppercase flex items-center justify-between">
+            <span>Outstanding Balances</span>
+            <AlertCircle className="w-4 h-4 text-[#D97706]" />
+          </div>
+          <div className="text-xl font-extrabold text-[#9A6208]">{formatCurrency(totalOutstandingBalance)}</div>
+          <div className="text-[10px] text-[#9A6208]/80 font-bold">Unsettled guest balance due</div>
+        </div>
+
+        <div className="zen-card p-4 space-y-1 bg-white border-[#E5E0D8]">
+          <div className="text-[11px] font-bold text-[#6E6B65] uppercase flex items-center justify-between">
+            <span>Active Invoices</span>
+            <FileText className="w-4 h-4 text-[#3D5A80]" />
+          </div>
+          <div className="text-xl font-extrabold text-[#1C1B18]">{billings.length}</div>
+          <div className="text-[10px] text-[#6E6B65] font-medium">Registered in database</div>
+        </div>
+      </div>
+
+      {/* Main Grid: Left Invoices Master List, Right Printable Invoice Folio Statement */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-        {/* Left Column: Invoice List */}
-        <div className="lg:col-span-5 zen-card p-4 space-y-3">
-          <div className="relative">
-            <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-[#6E6B65]" />
-            <input
-              type="text"
-              placeholder="Search invoice #, guest, room..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-9 pr-3 py-1.5 zen-input text-xs text-[#1C1B18] placeholder-[#6E6B65]"
-            />
+        {/* Left Column: Invoice Master List with Status Filters */}
+        <div className="lg:col-span-5 zen-card p-4 space-y-4">
+          <div className="space-y-3">
+            <div className="relative">
+              <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-[#6E6B65]" />
+              <input
+                type="text"
+                placeholder="Search invoice #, guest, room..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full pl-9 pr-3 py-1.5 zen-input text-xs text-[#1C1B18] placeholder-[#6E6B65]"
+              />
+            </div>
+
+            {/* Status Filter Pills */}
+            <div className="flex flex-wrap gap-1.5">
+              {['All', 'Paid', 'Partial', 'Unpaid'].map((st) => (
+                <button
+                  key={st}
+                  onClick={() => setStatusFilter(st)}
+                  className={`px-3 py-1 rounded-lg text-xs font-bold transition-all ${
+                    statusFilter === st
+                      ? 'bg-[#C84B31] text-white shadow-xs'
+                      : 'bg-[#F5F2EC] text-[#6E6B65] hover:text-[#1C1B18]'
+                  }`}
+                >
+                  {st}
+                </button>
+              ))}
+            </div>
           </div>
 
-          <div className="space-y-2 max-h-[600px] overflow-y-auto pr-1">
-            {filteredBillings.map((b) => (
-              <div
-                key={b.id}
-                onClick={() => handleSelectInvoice(b)}
-                className={`p-4 rounded-xl border cursor-pointer transition-all ${
-                  selectedInvoice?.id === b.id
-                    ? 'bg-[#F5F2EC] border-[#C84B31]'
-                    : 'bg-white border-[#E5E0D8] hover:border-[#CBD5E1]'
-                }`}
-              >
-                <div className="flex items-center justify-between">
-                  <span className="font-mono text-xs font-bold text-[#C84B31]">{b.invoiceNumber}</span>
-                  <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold border ${getPaymentStatusBadge(b.status)}`}>
-                    {b.status}
-                  </span>
-                </div>
-                <div className="mt-1 flex items-center justify-between text-xs">
-                  <span className="font-bold text-[#1C1B18]">{b.guestName}</span>
-                  <span className="text-[#6E6B65] font-medium">Room {b.roomNumber}</span>
-                </div>
-                <div className="mt-2 flex items-center justify-between text-xs pt-2 border-t border-[#E5E0D8]">
-                  <span className="text-[#6E6B65] font-medium">Grand Total:</span>
-                  <span className="font-bold text-[#1C1B18] text-sm">{formatCurrency(b.grandTotal)}</span>
-                </div>
+          <div className="space-y-2.5 max-h-[620px] overflow-y-auto pr-1">
+            {filteredBillings.length === 0 ? (
+              <div className="py-8 text-center text-xs text-[#6E6B65] font-medium">
+                No invoices found matching criteria.
               </div>
-            ))}
+            ) : (
+              filteredBillings.map((b) => (
+                <div
+                  key={b.id}
+                  onClick={() => handleSelectInvoice(b)}
+                  className={`p-4 rounded-xl border cursor-pointer transition-all space-y-2 ${
+                    selectedInvoice?.id === b.id
+                      ? 'bg-[#F5F2EC] border-[#C84B31] shadow-xs'
+                      : 'bg-white border-[#E5E0D8] hover:border-[#CBD5E1]'
+                  }`}
+                >
+                  <div className="flex items-center justify-between">
+                    <span className="font-mono text-xs font-bold text-[#C84B31] flex items-center gap-1">
+                      <FileText className="w-3.5 h-3.5" /> {b.invoiceNumber}
+                    </span>
+                    <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold border ${getPaymentStatusBadge(b.status)}`}>
+                      {b.status}
+                    </span>
+                  </div>
+
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="font-bold text-[#1C1B18]">{b.guestName}</span>
+                    <span className="text-[#6E6B65] font-semibold">Room {b.roomNumber}</span>
+                  </div>
+
+                  <div className="pt-2 border-t border-[#E5E0D8] flex items-center justify-between text-xs">
+                    <span className="text-[#6E6B65] font-medium">Grand Total:</span>
+                    <span className="font-extrabold text-[#1C1B18] text-sm">{formatCurrency(b.grandTotal)}</span>
+                  </div>
+                </div>
+              ))
+            )}
           </div>
         </div>
 
-        {/* Right Column: Detailed Invoice Folio */}
+        {/* Right Column: Printable Official Billing Folio */}
         <div className="lg:col-span-7 space-y-4">
           {selectedInvoice ? (
             <>
-              {/* Action Toolbar */}
+              {/* Action Station Toolbar */}
               <div className="zen-card p-4 flex flex-wrap items-center justify-between gap-3">
                 <div className="flex items-center gap-2">
                   <button
                     onClick={handleOpenPaymentModal}
                     disabled={selectedInvoice.balanceAmount === 0}
-                    className="px-4 py-2 zen-btn-primary rounded-lg text-xs font-bold flex items-center gap-2 shadow-xs disabled:opacity-40"
+                    className="px-4 py-2 zen-btn-primary text-xs font-bold flex items-center gap-2 shadow-xs disabled:opacity-40"
                   >
                     <CreditCard className="w-4 h-4" /> Record Payment
                   </button>
@@ -238,77 +329,90 @@ export const BillingPage: React.FC = () => {
                 <div className="flex items-center gap-2">
                   <button
                     onClick={() => exportElementToPDF('printable-invoice', selectedInvoice.invoiceNumber)}
-                    className="p-2 zen-btn text-xs font-bold flex items-center gap-1.5"
+                    className="px-3.5 py-2 zen-btn text-xs font-bold flex items-center gap-1.5 text-[#C84B31]"
                     title="Export PDF"
                   >
-                    <Download className="w-4 h-4 text-[#C84B31]" /> Export PDF
+                    <Download className="w-4 h-4" /> PDF
                   </button>
                   <button
                     onClick={printInvoice}
-                    className="p-2 zen-btn text-xs font-bold flex items-center gap-1.5"
-                    title="Print Invoice"
+                    className="px-4 py-2 zen-btn text-xs font-bold flex items-center gap-1.5 bg-[#1C1B18] text-white hover:bg-black border-none"
+                    title="Print Official Folio Sheet"
                   >
-                    <Printer className="w-4 h-4 text-[#6E6B65]" /> Print
+                    <Printer className="w-4 h-4" /> Print Folio Sheet
                   </button>
                 </div>
               </div>
 
-              {/* Printable Invoice Folio Container */}
-              <div id="printable-invoice" className="zen-card p-8 space-y-6 text-[#1C1B18]">
-                {/* Invoice Header */}
+              {/* Printable Official Folio Sheet Container */}
+              <div id="printable-invoice" className="zen-card p-8 space-y-6 text-[#1C1B18] bg-white border-[#E5E0D8]">
+                {/* Official Printed Header */}
                 <div className="flex justify-between items-start border-b border-[#E5E0D8] pb-6">
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <Building2 className="w-6 h-6 text-[#C84B31]" />
-                      <h1 className="text-xl font-bold tracking-tight text-[#1C1B18]">ARL's Hotel</h1>
+                  <div className="space-y-1">
+                    <div className="flex items-center gap-3">
+                      <Logo size={36} />
+                      <div>
+                        <h1 className="text-xl font-bold tracking-tight text-[#1C1B18] leading-none">ARL's Hotel</h1>
+                        <span className="text-[10px] text-[#6E6B65] font-semibold uppercase tracking-wider">Official Billing Folio Statement</span>
+                      </div>
                     </div>
-                    <p className="text-xs text-[#6E6B65] mt-1 font-medium">123 Coastal Boulevard, Hotel District</p>
-                    <p className="text-xs text-[#6E6B65] font-medium">Tax ID / TIN: 009-887-654-000</p>
+                    <p className="text-xs text-[#6E6B65] font-medium pt-1">123 Coastal Boulevard, Hotel District, Manila</p>
+                    <p className="text-xs text-[#6E6B65] font-medium">TIN: 009-887-654-000 • Tel: +63 (2) 8123-4567</p>
                   </div>
-                  <div className="text-right">
+
+                  <div className="text-right space-y-1">
                     <h2 className="text-lg font-bold text-[#C84B31] font-mono">{selectedInvoice.invoiceNumber}</h2>
-                    <div className="text-xs text-[#6E6B65] font-medium mt-1">Date: {formatDate(selectedInvoice.createdAt)}</div>
-                    <div className="mt-2">
+                    <div className="text-xs text-[#6E6B65] font-medium">Date: {formatDate(selectedInvoice.createdAt)}</div>
+                    <div className="pt-1">
                       <span className={`px-3 py-1 rounded-full text-xs font-bold border ${getPaymentStatusBadge(selectedInvoice.status)}`}>
-                        FOLIO STATUS: {selectedInvoice.status.toUpperCase()}
+                        {selectedInvoice.status.toUpperCase()}
                       </span>
                     </div>
                   </div>
                 </div>
 
-                {/* Guest Info Box */}
+                {/* Billed Guest Profile Box */}
                 <div className="grid grid-cols-2 gap-6 bg-[#F5F2EC] p-4 rounded-xl border border-[#E5E0D8] text-xs">
                   <div>
-                    <span className="text-[#6E6B65] font-bold block mb-1">BILLED TO:</span>
+                    <span className="text-[#6E6B65] font-bold block mb-1 uppercase tracking-wider text-[10px]">GUEST INFORMATION</span>
                     <div className="font-bold text-[#1C1B18] text-sm">{selectedInvoice.guestName}</div>
-                    <div className="text-[#6E6B65] mt-0.5 font-medium">Assigned Room: <span className="text-[#C84B31] font-bold">Room {selectedInvoice.roomNumber}</span></div>
+                    <div className="text-[#6E6B65] mt-1 font-medium">
+                      Assigned Room: <span className="text-[#C84B31] font-bold">Room {selectedInvoice.roomNumber}</span>
+                    </div>
                   </div>
                   <div className="text-right">
-                    <span className="text-[#6E6B65] font-bold block mb-1">STAY PERIOD:</span>
+                    <span className="text-[#6E6B65] font-bold block mb-1 uppercase tracking-wider text-[10px]">STAY SCHEDULE</span>
                     <div className="text-[#1C1B18] font-bold">{formatDate(selectedInvoice.checkInDate)} → {formatDate(selectedInvoice.checkOutDate)}</div>
+                    <div className="text-[#6E6B65] mt-1 font-medium">Duration: {selectedInvoice.items?.[0]?.quantity || 1} Night(s)</div>
                   </div>
                 </div>
 
-                {/* Line Items Table */}
+                {/* Itemized Line Charges Table */}
                 <div className="overflow-x-auto">
                   <table className="w-full text-left text-xs table-fixed">
                     <thead className="bg-[#F5F2EC] text-[#6E6B65] font-bold border-b border-[#E5E0D8]">
                       <tr>
-                        <th className="px-4 py-3">Description</th>
+                        <th className="px-4 py-3">Description & Service Particulars</th>
                         <th className="px-4 py-3 w-20 text-center">Qty</th>
                         <th className="px-4 py-3 w-32 text-right">Unit Price</th>
                         <th className="px-4 py-3 w-36 text-right">Amount (₱)</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-[#E5E0D8]">
-                      {selectedInvoice.items && selectedInvoice.items.map((item, idx) => (
-                        <tr key={idx}>
-                          <td className="px-4 py-3 text-[#1C1B18] font-medium">{item.description}</td>
-                          <td className="px-4 py-3 text-center text-[#6E6B65] font-bold">{item.quantity}</td>
-                          <td className="px-4 py-3 text-right text-[#6E6B65] font-medium">{formatCurrency(item.unitPrice)}</td>
-                          <td className="px-4 py-3 text-right font-bold text-[#1C1B18]">{formatCurrency(item.amount)}</td>
+                      {selectedInvoice.items && selectedInvoice.items.length > 0 ? (
+                        selectedInvoice.items.map((item, idx) => (
+                          <tr key={idx}>
+                            <td className="px-4 py-3 text-[#1C1B18] font-medium">{item.description}</td>
+                            <td className="px-4 py-3 text-center text-[#6E6B65] font-bold">{item.quantity}</td>
+                            <td className="px-4 py-3 text-right text-[#6E6B65] font-medium">{formatCurrency(item.unitPrice)}</td>
+                            <td className="px-4 py-3 text-right font-bold text-[#1C1B18]">{formatCurrency(item.amount)}</td>
+                          </tr>
+                        ))
+                      ) : (
+                        <tr>
+                          <td colSpan={4} className="px-4 py-4 text-center text-[#6E6B65]">No line items recorded.</td>
                         </tr>
-                      ))}
+                      )}
                     </tbody>
                   </table>
                 </div>
@@ -316,7 +420,7 @@ export const BillingPage: React.FC = () => {
                 {/* Financial Calculation Summary */}
                 <div className="border-t border-[#E5E0D8] pt-4 space-y-2 text-xs">
                   <div className="flex justify-between text-[#6E6B65] font-medium">
-                    <span>Subtotal Charges:</span>
+                    <span>Subtotal Room & Extra Charges:</span>
                     <span className="text-[#1C1B18] font-bold">{formatCurrency(selectedInvoice.subtotal)}</span>
                   </div>
                   {selectedInvoice.discountAmount > 0 && (
@@ -334,11 +438,11 @@ export const BillingPage: React.FC = () => {
                     <span className="text-[#1C1B18] font-bold">{formatCurrency(selectedInvoice.serviceCharge)}</span>
                   </div>
                   <div className="flex justify-between text-sm font-bold text-[#1C1B18] pt-2 border-t border-[#E5E0D8]">
-                    <span>Grand Total:</span>
+                    <span>Grand Total Billed Amount:</span>
                     <span className="text-[#C84B31] text-base">{formatCurrency(selectedInvoice.grandTotal)}</span>
                   </div>
                   <div className="flex justify-between text-xs text-[#2D5A39] font-bold">
-                    <span>Total Amount Paid:</span>
+                    <span>Total Settled Payments:</span>
                     <span>{formatCurrency(selectedInvoice.paidAmount)}</span>
                   </div>
                   <div className="flex justify-between text-xs font-bold text-[#9A6208]">
@@ -363,11 +467,27 @@ export const BillingPage: React.FC = () => {
                     </div>
                   </div>
                 )}
+
+                {/* Official Signatures Block */}
+                <div className="pt-8 border-t border-[#E5E0D8] grid grid-cols-2 gap-12 text-xs">
+                  <div className="space-y-8 text-center">
+                    <div className="border-b border-[#1C1B18] pb-1 font-bold text-[#1C1B18]">
+                      Front Desk Cashier
+                    </div>
+                    <div className="text-[10px] text-[#6E6B65] font-semibold">Authorized Staff Signature</div>
+                  </div>
+                  <div className="space-y-8 text-center">
+                    <div className="border-b border-[#1C1B18] pb-1 font-bold text-[#1C1B18]">
+                      {selectedInvoice.guestName}
+                    </div>
+                    <div className="text-[10px] text-[#6E6B65] font-semibold">Guest Signature Acknowledgement</div>
+                  </div>
+                </div>
               </div>
             </>
           ) : (
             <div className="zen-card p-8 text-center text-[#6E6B65] font-medium">
-              Select an invoice from the left panel to preview statement details.
+              Select an invoice from the left master list to preview statement details.
             </div>
           )}
         </div>
@@ -378,7 +498,7 @@ export const BillingPage: React.FC = () => {
         isOpen={isPaymentModalOpen}
         onClose={() => setIsPaymentModalOpen(false)}
         title={`Record Payment for ${selectedInvoice?.invoiceNumber}`}
-        subtitle={`Remaining Balance: ${formatCurrency(selectedInvoice?.balanceAmount)}`}
+        subtitle={`Remaining Balance Due: ${formatCurrency(selectedInvoice?.balanceAmount)}`}
       >
         <form onSubmit={handleRecordPayment} className="space-y-4">
           <div>
