@@ -1,0 +1,148 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  /* Japandi / Zen Japanese Minimalist Palette */
+  --japandi-bg: #F5F2EC;
+  --japandi-surface: #FFFFFF;
+  --japandi-border: #E5E0D8;
+  --japandi-sumi-ink: #1C1B18;
+  --japandi-muted: #6E6B65;
+  --japandi-crimson: #C84B31;
+  --japandi-crimson-hover: #B43F27;
+  --japandi-matcha: #4A7C59;
+  --japandi-slate-blue: #3D5A80;
+  --japandi-amber: #D97706;
+}
+
+/* Hide default cursor to enable custom Figma SVG cursor */
+*, *::before, *::after {
+  cursor: none !important;
+}
+
+body {
+  font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+  background-color: var(--japandi-bg);
+  color: var(--japandi-sumi-ink);
+  overflow-x: hidden;
+}
+
+/* Shoji Paper Zen Surface Cards */
+.zen-card {
+  background-color: #FFFFFF;
+  border: 1px solid #E5E0D8;
+  border-radius: 0.75rem;
+  box-shadow: 0 1px 3px 0 rgba(28, 27, 24, 0.03);
+}
+
+.zen-card-accent {
+  background-color: #FFFFFF;
+  border: 1px solid #E5E0D8;
+  border-left: 4px solid var(--japandi-crimson);
+  border-radius: 0.75rem;
+}
+
+.zen-card-hover {
+  transition: all 0.15s ease-in-out;
+}
+.zen-card-hover:hover {
+  border-color: #D3CDC2;
+  box-shadow: 0 4px 10px -2px rgba(200, 75, 49, 0.08);
+}
+
+/* Zen Input Field */
+.zen-input {
+  background-color: #FFFFFF;
+  border: 1px solid #D8D2C7;
+  border-radius: 0.5rem;
+  color: #1C1B18;
+  font-size: 0.8125rem;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.zen-input:focus {
+  outline: none;
+  border-color: var(--japandi-crimson);
+  box-shadow: 0 0 0 3px rgba(200, 75, 49, 0.12);
+}
+
+/* Custom Select Dropdown Styling */
+select, select.zen-input {
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23C84B31' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><polyline points='6 9 12 15 18 9'></polyline></svg>");
+  background-repeat: no-repeat;
+  background-position: right 0.75rem center;
+  background-size: 1em;
+  padding-right: 2.25rem !important;
+  cursor: none !important;
+}
+
+select option {
+  background-color: #FFFFFF;
+  color: #1C1B18;
+  padding: 8px 12px;
+  font-weight: 500;
+}
+
+/* Primary Crimson Stamp Button */
+.zen-btn-primary {
+  background-color: var(--japandi-crimson);
+  color: #FFFFFF;
+  border-radius: 0.5rem;
+  font-weight: 600;
+  transition: all 0.15s ease;
+}
+.zen-btn-primary:hover {
+  background-color: var(--japandi-crimson-hover);
+  box-shadow: 0 4px 8px rgba(200, 75, 49, 0.2);
+}
+
+/* Neutral Wood Button */
+.zen-btn {
+  background-color: #FFFFFF;
+  border: 1px solid #D8D2C7;
+  color: #1C1B18;
+  border-radius: 0.5rem;
+  font-weight: 600;
+  transition: all 0.15s ease;
+}
+.zen-btn:hover {
+  background-color: #F5F2EC;
+  border-color: #C7C0B3;
+}
+
+/* ------------------------------------------------------------- */
+/* CUSTOM COLORED JAPANDI SCROLLBAR */
+/* ------------------------------------------------------------- */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-track {
+  background: #F5F2EC;
+  border-left: 1px solid #E5E0D8;
+}
+::-webkit-scrollbar-thumb {
+  background: #C84B31;
+  border-radius: 4px;
+  border: 2px solid #F5F2EC;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #B43F27;
+}
+
+@media print {
+  body {
+    background-color: white !important;
+    color: black !important;
+  }
+  .no-print {
+    display: none !important;
+  }
+  *, *::before, *::after {
+    cursor: auto !important;
+  }
+}
