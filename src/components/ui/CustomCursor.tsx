@@ -54,44 +54,54 @@ export const CustomCursor: React.FC = () => {
       }}
     >
       <div
-        className={`relative transition-all duration-150 ease-out ${
-          isMouseDown ? 'scale-90' : isHovered ? 'scale-125 -translate-x-2 -translate-y-2' : 'scale-100'
+        className={`relative transition-transform duration-150 ease-out ${
+          isMouseDown ? 'scale-90' : 'scale-100'
         }`}
+        style={{
+          transformOrigin: isHovered ? '6px 2px' : '0px 0px',
+        }}
       >
         {isHovered ? (
-          /* Vector Hand Clicking Pointer SVG */
+          /* Authentic Pixel-Perfect Figma / macOS Index Hand Pointer */
           <svg
-            width="28"
-            height="28"
-            viewBox="0 0 24 24"
+            width="22"
+            height="26"
+            viewBox="0 0 22 26"
             fill="none"
             xmlns="http://www.w3.org/2000/svg"
-            className="filter drop-shadow-[0_8px_16px_rgba(200,75,49,0.45)] transition-all duration-150"
+            className="filter drop-shadow-[0_4px_12px_rgba(0,0,0,0.3)] transition-all duration-150"
           >
             <path
-              d="M9 11V4.5C9 3.67157 9.67157 3 10.5 3C11.3284 3 12 3.67157 12 4.5V10.5M12 10.5V5.5C12 4.67157 12.6716 4 13.5 4C14.3284 4 15 4.67157 15 5.5V10.5M15 10.5V7C15 6.17157 15.6716 5.5 16.5 5.5C17.3284 5.5 18 6.17157 18 7V13.5C18 17.6421 14.6421 21 10.5 21C7.15082 21 4.31688 18.7915 3.37688 15.5862L2.24264 11.7196C2.00166 10.897 2.65152 10.1066 3.50428 10.1558L6.44474 10.3256C7.23438 10.3711 7.94065 10.8529 8.24355 11.5833L9 13.4"
-              fill="#C84B31"
-              stroke="#FFFFFF"
+              d="M7 1V13.5M7 1C6.17157 1 5.5 1.67157 5.5 2.5V11.5M7 1C7.82843 1 8.5 1.67157 8.5 2.5V12M11.5 6C10.6716 6 10 6.67157 10 7.5V12.5M11.5 6C12.3284 6 13 6.67157 13 7.5V13.5M16 8.5C15.1716 8.5 14.5 9.17157 14.5 10V14.5M16 8.5C16.8284 8.5 17.5 9.17157 17.5 10V16.5C17.5 20.6421 14.1421 24 10 24C6.65082 24 3.81688 21.7915 2.87688 18.5862L1.74264 14.7196C1.50166 13.897 2.15152 13.1066 3.00428 13.1558L5.94474 13.3256C6.73438 13.3711 7.44065 13.8529 7.74355 14.5833L8.5 16.4"
+              fill="#FFFFFF"
+              stroke="#1C1B18"
               strokeWidth="1.5"
               strokeLinecap="round"
               strokeLinejoin="round"
             />
+            {/* Elegant Crimson Accent Cuff Ring */}
+            <circle cx="10" cy="20.5" r="1.5" fill="#C84B31" />
           </svg>
         ) : (
-          /* Default Figma SVG Arrow Pointer */
+          /* Sleek Figma Vector Arrow Pointer */
           <svg
-            width="24"
+            width="20"
             height="24"
-            viewBox="0 0 24 24"
+            viewBox="0 0 20 24"
             fill="none"
             xmlns="http://www.w3.org/2000/svg"
-            className="filter drop-shadow-md transition-all duration-150"
+            className="filter drop-shadow-[0_2px_8px_rgba(0,0,0,0.25)] transition-all duration-150"
           >
             <path
-              d="M5.65376 12.3673H5.46026L5.31717 12.4976L0.500001 16.8829V0.500001L18.4237 12.3673H5.65376Z"
-              fill="#C84B31"
-              stroke="#FFFFFF"
+              d="M1 1L18 11.5L9.5 13.5L14 22.5L10.5 24L6 15L1 19.5V1Z"
+              fill="#FFFFFF"
+              stroke="#1C1B18"
               strokeWidth="1.5"
+              strokeLinejoin="round"
+            />
+            <path
+              d="M4 5.5L13.5 11.5L8.5 12.8L11.8 19.5L9.8 20.5L6.5 13.8L4 16V5.5Z"
+              fill="#1C1B18"
             />
           </svg>
         )}
