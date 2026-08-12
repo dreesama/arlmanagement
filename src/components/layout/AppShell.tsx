@@ -13,11 +13,7 @@ import { User } from '../../types';
 import { LoginModal } from '../auth/LoginModal';
 import { CustomCursor } from '../ui/CustomCursor';
 
-interface AppShellProps {
-  onGoToGuest?: () => void;
-}
-
-export const AppShell: React.FC<AppShellProps> = ({ onGoToGuest }) => {
+export const AppShell: React.FC = () => {
   const [activeTab, setActiveTab] = useState<string>('dashboard');
   const [sidebarCollapsed, setSidebarCollapsed] = useState<boolean>(false);
   const [currentUser, setCurrentUser] = useState<User | null>({
@@ -63,7 +59,7 @@ export const AppShell: React.FC<AppShellProps> = ({ onGoToGuest }) => {
             }`}
           >
             {/* Header */}
-            <Header activeTab={activeTab} currentUser={currentUser} onGoToGuest={onGoToGuest} />
+            <Header activeTab={activeTab} currentUser={currentUser} />
 
             {/* Center Main Module Content */}
             <main className="flex-1 overflow-y-auto">

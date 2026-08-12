@@ -136,22 +136,28 @@ select option {
 }
 
 /* ------------------------------------------------------------- */
-/* PRINTING CSS RULES FOR OFFICIAL BILLING FOLIO */
+/* PRINTING CSS RULES FOR OFFICIAL FOLIOS, CARDS & RECEIPTS */
 /* ------------------------------------------------------------- */
 @media print {
   body * {
     visibility: hidden;
   }
-  #printable-invoice, #printable-invoice * {
+  #printable-invoice, #printable-invoice *,
+  #printable-registration-card, #printable-registration-card *,
+  #printable-reservation-confirmation, #printable-reservation-confirmation *,
+  #printable-checkout-receipt, #printable-checkout-receipt * {
     visibility: visible;
   }
-  #printable-invoice {
+  #printable-invoice,
+  #printable-registration-card,
+  #printable-reservation-confirmation,
+  #printable-checkout-receipt {
     position: absolute;
     left: 0;
     top: 0;
     width: 100%;
     margin: 0;
-    padding: 20px;
+    padding: 24px;
     background: white !important;
     color: black !important;
     border: none !important;

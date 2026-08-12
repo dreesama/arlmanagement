@@ -1,8 +1,8 @@
 import React, { useEffect, useState } from 'react';
-import { Plus, Search, Edit2, Trash2, Download, Star, Mail, Phone } from 'lucide-react';
+import { Plus, Search, Edit2, Trash2, Download, Star, Mail, Phone, Eye, Calendar, DollarSign, Building2, UserCheck } from 'lucide-react';
 import { Guest } from '../types';
 import { api } from '../lib/api';
-import { formatDate } from '../lib/utils';
+import { formatDate, formatCurrency, getReservationStatusBadge, getPaymentStatusBadge } from '../lib/utils';
 import { exportToExcel } from '../utils/exports';
 import { Modal } from '../components/ui/Modal';
 
@@ -11,9 +11,28 @@ export const Guests: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
 
-  // Modal State
+  // Add / Edit Modal State
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingGuest, setEditingGuest] = useState<Guest | null>(null);
+
+  // View Profile Modal State
+  const [viewingGuest, setViewingGuest] = useState<Guest | null>(null);
+  const [guestReservations, setGuestReservations] = useState<any[]>([]);
+  const [guestBillings, setGuestBillings] = useState<any[]>([]);
+
+  const handleOpenViewProfile = async (guest: Guest) => {
+    setViewingGuest(guest);
+    try {
+      const [resData, billData] = await Promise.all([api.getReservations(), api.getBillings()]);
+      const myRes = resData.filter((r) => r.guestId === guest.id);
+      const myResIds = new Set(myRes.map((r) => r.id));
+      const myBill = billData.filter((b) => myResIds.has(b.reservationId));
+      setGuestReservations(myRes);
+      setGuestBillings(myBill);
+    } catch (e) {
+      console.error('Failed to load guest history:', e);
+    }
+  };
 
   // Form Fields
   const [fullName, setFullName] = useState('');
@@ -238,6 +257,13 @@ export const Guests: React.FC = () => {
                     <td className="px-4 py-3.5 text-right">
                       <div className="flex items-center justify-end gap-1">
                         <button
+                          onClick={() => handleOpenViewProfile(g)}
+                          className="p-1.5 rounded-lg text-[#C84B31] bg-[#F5F2EC] hover:bg-[#C84B31] hover:text-white transition-colors border border-[#E5E0D8]"
+                          title="View Guest Profile & Stay History"
+                        >
+                          <Eye className="w-3.5 h-3.5" />
+                        </button>
+                        <button
                           onClick={() => handleOpenEdit(g)}
                           className="p-1.5 rounded-lg text-[#6E6B65] hover:text-[#C84B31] hover:bg-[#F5F2EC] transition-colors border border-[#E5E0D8]"
                           title="Edit Profile"
@@ -397,6 +423,157 @@ export const Guests: React.FC = () => {
             </button>
           </div>
         </form>
+      </Modal>
+
+      {/* Comprehensive View Guest Profile Modal */}
+      <Modal
+        isOpen={!!viewingGuest}
+        onClose={() => setViewingGuest(null)}
+        title={`Guest Profile — ${viewingGuest?.fullName}`}
+        subtitle="Complete identity particulars, stay history & total lifetime spend"
+        maxWidth="2xl"
+      >
+        {viewingGuest && (
+          <div className="space-y-6 text-xs text-[#1C1B18]">
+            {/* Header Banner Summary */}
+            <div className="p-4 bg-[#F5F2EC] rounded-xl border border-[#E5E0D8] flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+              <div className="flex items-center gap-3">
+                <div className="w-12 h-12 rounded-full bg-white border border-[#E5E0D8] flex items-center justify-center font-extrabold text-[#C84B31] text-base shrink-0">
+                  {viewingGuest.fullName.charAt(0)}
+                </div>
+                <div>
+                  <h3 className="text-sm font-bold text-[#1C1B18] flex items-center gap-2">
+                    {viewingGuest.fullName}
+                    {viewingGuest.isVip && (
+                      <span className="bg-[#FEF7EC] text-[#9A6208] border border-[#FCE1B6] px-2 py-0.5 text-[10px] font-bold rounded-full flex items-center gap-1">
+                        <Star className="w-3 h-3 fill-[#D97706]" /> VIP Guest
+                      </span>
+                    )}
+                  </h3>
+                  <div className="text-[11px] text-[#6E6B65] font-medium mt-0.5">
+                    {viewingGuest.nationality} • Member since {formatDate(viewingGuest.createdAt)}
+                  </div>
+                </div>
+              </div>
+
+              {/* Lifetime Stats */}
+              <div className="flex items-center gap-4 bg-white p-3 rounded-lg border border-[#E5E0D8]">
+                <div className="text-center px-2 border-r border-[#E5E0D8]">
+                  <span className="text-[10px] text-[#6E6B65] font-bold block uppercase">Total Stays</span>
+                  <span className="text-base font-extrabold text-[#C84B31]">{guestReservations.length}</span>
+                </div>
+                <div className="text-center px-2">
+                  <span className="text-[10px] text-[#6E6B65] font-bold block uppercase">Lifetime Spend</span>
+                  <span className="text-base font-extrabold text-[#2D5A39]">
+                    {formatCurrency(guestReservations.reduce((sum, r) => sum + (r.totalAmount || 0), 0))}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {/* Personal Details Breakdown */}
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 p-4 bg-white rounded-xl border border-[#E5E0D8]">
+              <div>
+                <span className="text-[#6E6B65] font-bold block text-[10px] uppercase">Email Address</span>
+                <span className="font-semibold text-[#1C1B18]">{viewingGuest.email}</span>
+              </div>
+              <div>
+                <span className="text-[#6E6B65] font-bold block text-[10px] uppercase">Phone Number</span>
+                <span className="font-semibold text-[#1C1B18]">{viewingGuest.phone}</span>
+              </div>
+              <div>
+                <span className="text-[#6E6B65] font-bold block text-[10px] uppercase">Identity Document</span>
+                <span className="font-bold text-[#1C1B18]">{viewingGuest.idType}</span>
+                <span className="font-mono text-[10px] text-[#6E6B65] block">{viewingGuest.idNumber}</span>
+              </div>
+              <div className="col-span-2">
+                <span className="text-[#6E6B65] font-bold block text-[10px] uppercase">Residential Address</span>
+                <span className="font-semibold text-[#1C1B18]">{viewingGuest.address || 'N/A'}</span>
+              </div>
+              <div>
+                <span className="text-[#6E6B65] font-bold block text-[10px] uppercase">Special Notes</span>
+                <span className="font-medium text-[#1C1B18] italic">{viewingGuest.notes || 'None recorded'}</span>
+              </div>
+            </div>
+
+            {/* Stay & Reservation History List */}
+            <div className="space-y-3">
+              <h4 className="font-bold text-xs text-[#1C1B18] flex items-center gap-1.5 border-b border-[#E5E0D8] pb-1.5">
+                <Calendar className="w-4 h-4 text-[#C84B31]" /> Stay & Reservation History ({guestReservations.length})
+              </h4>
+
+              <div className="space-y-2 max-h-48 overflow-y-auto pr-1">
+                {guestReservations.length === 0 ? (
+                  <div className="p-4 text-center text-[#6E6B65] font-medium bg-[#F5F2EC]/40 rounded-lg border border-dashed border-[#E5E0D8]">
+                    No previous reservation records found.
+                  </div>
+                ) : (
+                  guestReservations.map((r) => (
+                    <div key={r.id} className="p-3 bg-[#F5F2EC]/60 rounded-lg border border-[#E5E0D8] flex items-center justify-between">
+                      <div className="space-y-1">
+                        <div className="flex items-center gap-2">
+                          <span className="font-bold text-[#1C1B18]">Room {r.roomNumber} ({r.roomType})</span>
+                          <span className="font-mono text-[10px] text-[#C84B31] font-bold bg-white px-1.5 py-0.2 rounded border border-[#E5E0D8]">
+                            {r.reservationCode}
+                          </span>
+                        </div>
+                        <div className="text-[11px] text-[#6E6B65] font-medium">
+                          {formatDate(r.checkInDate)} → {formatDate(r.checkOutDate)} ({r.nights} night/s)
+                        </div>
+                      </div>
+
+                      <div className="text-right space-y-1">
+                        <div className="font-bold text-[#1C1B18]">{formatCurrency(r.totalAmount)}</div>
+                        <span className={`px-2 py-0.5 rounded text-[10px] font-bold border ${getReservationStatusBadge(r.status)}`}>
+                          {r.status}
+                        </span>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
+
+            {/* Linked Billing Statements */}
+            <div className="space-y-3">
+              <h4 className="font-bold text-xs text-[#1C1B18] flex items-center gap-1.5 border-b border-[#E5E0D8] pb-1.5">
+                <DollarSign className="w-4 h-4 text-[#4A7C59]" /> Billing Statements ({guestBillings.length})
+              </h4>
+
+              <div className="space-y-2 max-h-40 overflow-y-auto pr-1">
+                {guestBillings.length === 0 ? (
+                  <div className="p-4 text-center text-[#6E6B65] font-medium bg-[#F5F2EC]/40 rounded-lg border border-dashed border-[#E5E0D8]">
+                    No billing statements linked.
+                  </div>
+                ) : (
+                  guestBillings.map((b) => (
+                    <div key={b.id} className="p-2.5 bg-[#F5F2EC]/60 rounded-lg border border-[#E5E0D8] flex items-center justify-between text-xs">
+                      <div>
+                        <span className="font-mono font-bold text-[#C84B31]">{b.invoiceNumber}</span>
+                        <span className="text-[#6E6B65] ml-2 font-medium">Room {b.roomNumber}</span>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <span className="font-bold text-[#1C1B18]">{formatCurrency(b.grandTotal)}</span>
+                        <span className={`px-2 py-0.5 rounded text-[10px] font-bold border ${getPaymentStatusBadge(b.status)}`}>
+                          {b.status}
+                        </span>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
+
+            <div className="flex justify-end pt-4 border-t border-[#E5E0D8]">
+              <button
+                onClick={() => setViewingGuest(null)}
+                className="px-5 py-2 zen-btn-primary text-xs font-bold shadow-xs"
+              >
+                Close Profile
+              </button>
+            </div>
+          </div>
+        )}
       </Modal>
     </div>
   );

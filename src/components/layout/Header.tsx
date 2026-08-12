@@ -6,7 +6,6 @@ import { Logo } from '../ui/Logo';
 interface HeaderProps {
   activeTab: string;
   currentUser: User | null;
-  onGoToGuest?: () => void;
 }
 
 const tabTitles: Record<string, { title: string; subtitle: string }> = {
@@ -19,7 +18,7 @@ const tabTitles: Record<string, { title: string; subtitle: string }> = {
   reports: { title: 'Analytics & Reports', subtitle: 'Daily bookings, monthly revenue breakdown, and occupancy trends' },
 };
 
-export const Header: React.FC<HeaderProps> = ({ activeTab, onGoToGuest }) => {
+export const Header: React.FC<HeaderProps> = ({ activeTab }) => {
   const current = tabTitles[activeTab] || { title: 'ARL\'s Hotel', subtitle: 'Management System' };
   const currentTime = new Date().toLocaleDateString('en-PH', {
     weekday: 'short',
@@ -39,15 +38,6 @@ export const Header: React.FC<HeaderProps> = ({ activeTab, onGoToGuest }) => {
       </div>
 
       <div className="flex items-center gap-3">
-        {onGoToGuest && (
-          <button
-            onClick={onGoToGuest}
-            className="px-3 py-1.5 zen-btn text-xs font-bold flex items-center gap-1.5 transition-all text-[#C84B31] hover:text-[#B43F27]"
-            title="Switch to Public Guest Landing Page"
-          >
-            <Globe className="w-3.5 h-3.5" /> Public Guest Site ↗
-          </button>
-        )}
 
         {/* Date Display */}
         <div className="hidden md:flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#F5F2EC] border border-[#E5E0D8] text-xs font-semibold text-[#1C1B18]">

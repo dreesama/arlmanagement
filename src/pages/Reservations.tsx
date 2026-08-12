@@ -1,10 +1,11 @@
 import React, { useEffect, useState } from 'react';
-import { Plus, Search, Filter, Edit2, XCircle, Download, Calendar, UserCheck } from 'lucide-react';
-import { Reservation, Room, Guest } from '../types';
+import { Plus, Search, Filter, Edit2, XCircle, Download, Calendar, UserCheck, Printer, CreditCard, CheckCircle, FileText } from 'lucide-react';
+import { Reservation, Room, Guest, PaymentMethod } from '../types';
 import { api } from '../lib/api';
-import { formatCurrency, formatDate, getReservationStatusBadge } from '../lib/utils';
-import { exportToExcel } from '../utils/exports';
+import { formatCurrency, formatDate, formatDateTime, getReservationStatusBadge } from '../lib/utils';
+import { exportToExcel, printInvoice } from '../utils/exports';
 import { Modal } from '../components/ui/Modal';
+import { Logo } from '../components/ui/Logo';
 
 export const Reservations: React.FC = () => {
   const [reservations, setReservations] = useState<Reservation[]>([]);
@@ -18,6 +19,18 @@ export const Reservations: React.FC = () => {
   // Modal State
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingRes, setEditingRes] = useState<Reservation | null>(null);
+
+  // Deposit Payment Modal State
+  const [paymentRes, setPaymentRes] = useState<Reservation | null>(null);
+  const [paymentBilling, setPaymentBilling] = useState<any | null>(null);
+  const [payAmount, setPayAmount] = useState<number>(0);
+  const [payMethod, setPayMethod] = useState<PaymentMethod>('Cash');
+  const [payRef, setPayRef] = useState('');
+  const [payNotes, setPayNotes] = useState('');
+
+  // Printable Confirmation Voucher State
+  const [printingRes, setPrintingRes] = useState<Reservation | null>(null);
+  const [printingBilling, setPrintingBilling] = useState<any | null>(null);
 
   // Form Fields
   const [guestId, setGuestId] = useState<number>(0);
@@ -110,6 +123,50 @@ export const Reservations: React.FC = () => {
       loadData();
     } catch (err: any) {
       alert(`Error saving reservation: ${err.message}`);
+    }
+  };
+
+  const handleOpenDepositModal = async (res: Reservation) => {
+    setPaymentRes(res);
+    try {
+      const billings = await api.getBillings();
+      const b = billings.find((bill) => bill.reservationId === res.id);
+      setPaymentBilling(b || null);
+      setPayAmount(b ? b.balanceAmount : res.totalAmount);
+      setPayMethod('Cash');
+      setPayRef('');
+      setPayNotes('Advance reservation deposit');
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  const handleRecordDeposit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!paymentBilling) return;
+    try {
+      await api.recordPayment(paymentBilling.id, {
+        amount: Number(payAmount),
+        method: payMethod,
+        referenceNo: payRef,
+        notes: payNotes,
+      });
+      alert('Advance reservation payment recorded successfully!');
+      setPaymentRes(null);
+      loadData();
+    } catch (err: any) {
+      alert(`Error recording deposit: ${err.message}`);
+    }
+  };
+
+  const handleOpenPrintVoucher = async (res: Reservation) => {
+    setPrintingRes(res);
+    try {
+      const billings = await api.getBillings();
+      const b = billings.find((bill) => bill.reservationId === res.id);
+      setPrintingBilling(b || null);
+    } catch (e) {
+      console.error(e);
     }
   };
 
@@ -266,6 +323,24 @@ export const Reservations: React.FC = () => {
                     </td>
                     <td className="px-4 py-3.5 text-right">
                       <div className="flex items-center justify-end gap-1">
+                        {res.status !== 'Cancelled' && (
+                          <>
+                            <button
+                              onClick={() => handleOpenPrintVoucher(res)}
+                              className="p-1.5 rounded-lg text-[#1C1B18] bg-[#F5F2EC] hover:bg-[#1C1B18] hover:text-white transition-colors border border-[#E5E0D8]"
+                              title="Print Reservation Voucher"
+                            >
+                              <Printer className="w-3.5 h-3.5" />
+                            </button>
+                            <button
+                              onClick={() => handleOpenDepositModal(res)}
+                              className="p-1.5 rounded-lg text-[#2D5A39] bg-[#EBF5EF] hover:bg-[#2D5A39] hover:text-white transition-colors border border-[#BCE3C8]"
+                              title="Record Advance Deposit / Payment"
+                            >
+                              <CreditCard className="w-3.5 h-3.5" />
+                            </button>
+                          </>
+                        )}
                         {res.status !== 'Cancelled' && res.status !== 'Checked-Out' && (
                           <button
                             onClick={() => handleOpenEdit(res)}
@@ -419,6 +494,215 @@ export const Reservations: React.FC = () => {
             </button>
           </div>
         </form>
+      </Modal>
+
+      {/* Advance Reservation Deposit Payment Dialog */}
+      <Modal
+        isOpen={!!paymentRes}
+        onClose={() => setPaymentRes(null)}
+        title={`Record Reservation Deposit — ${paymentRes?.reservationCode}`}
+        subtitle={`Guest: ${paymentRes?.guestName} • Total Booking Amount: ${formatCurrency(paymentRes?.totalAmount || 0)}`}
+      >
+        <form onSubmit={handleRecordDeposit} className="space-y-4 text-xs">
+          {paymentBilling && (
+            <div className="p-3.5 bg-[#F5F2EC] rounded-xl border border-[#E5E0D8] space-y-1">
+              <div className="flex justify-between font-bold text-[#1C1B18]">
+                <span>Invoice: {paymentBilling.invoiceNumber}</span>
+                <span className="text-[#C84B31]">{formatCurrency(paymentBilling.grandTotal)} Total</span>
+              </div>
+              <div className="flex justify-between text-[11px] text-[#6E6B65]">
+                <span>Total Paid: {formatCurrency(paymentBilling.paidAmount)}</span>
+                <span className="font-bold text-[#9A6208]">Remaining Balance: {formatCurrency(paymentBilling.balanceAmount)}</span>
+              </div>
+            </div>
+          )}
+
+          <div>
+            <label className="block font-bold text-[#1C1B18] mb-1">Deposit / Payment Amount (₱) *</label>
+            <input
+              type="number"
+              required
+              min={1}
+              max={paymentBilling?.balanceAmount || paymentRes?.totalAmount || 999999}
+              value={payAmount}
+              onChange={(e) => setPayAmount(Number(e.target.value))}
+              className="w-full px-3 py-2 zen-input text-xs font-bold text-[#1C1B18]"
+            />
+          </div>
+
+          <div>
+            <label className="block font-bold text-[#1C1B18] mb-1">Payment Method *</label>
+            <select
+              value={payMethod}
+              onChange={(e) => setPayMethod(e.target.value as PaymentMethod)}
+              className="w-full px-3 py-2 zen-input text-xs text-[#1C1B18]"
+            >
+              <option value="Cash">Cash</option>
+              <option value="GCash">GCash</option>
+              <option value="Credit Card">Credit Card</option>
+              <option value="Bank Transfer">Bank Transfer</option>
+            </select>
+          </div>
+
+          <div>
+            <label className="block font-bold text-[#1C1B18] mb-1">Reference / Transaction Number</label>
+            <input
+              type="text"
+              value={payRef}
+              onChange={(e) => setPayRef(e.target.value)}
+              className="w-full px-3 py-2 zen-input text-xs text-[#1C1B18]"
+              placeholder="e.g. GCASH-987654 or Card Approval Code"
+            />
+          </div>
+
+          <div>
+            <label className="block font-bold text-[#1C1B18] mb-1">Payment Notes</label>
+            <input
+              type="text"
+              value={payNotes}
+              onChange={(e) => setPayNotes(e.target.value)}
+              className="w-full px-3 py-2 zen-input text-xs text-[#1C1B18]"
+              placeholder="e.g. 50% advance downpayment"
+            />
+          </div>
+
+          <div className="flex justify-end gap-3 pt-4 border-t border-[#E5E0D8]">
+            <button
+              type="button"
+              onClick={() => setPaymentRes(null)}
+              className="px-4 py-2 zen-btn text-xs font-bold"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              className="px-4 py-2 zen-btn-primary text-xs font-bold shadow-xs flex items-center gap-1.5"
+            >
+              <CheckCircle className="w-4 h-4" /> Save Deposit Payment
+            </button>
+          </div>
+        </form>
+      </Modal>
+
+      {/* Printable Reservation Confirmation Voucher Modal */}
+      <Modal
+        isOpen={!!printingRes}
+        onClose={() => setPrintingRes(null)}
+        title={`Reservation Voucher — ${printingRes?.reservationCode}`}
+        subtitle="Official Reservation Confirmation Sheet for Guest"
+        maxWidth="2xl"
+      >
+        {printingRes && (
+          <div className="space-y-6 text-xs text-[#1C1B18]">
+            {/* Top Print Toolbar */}
+            <div className="flex justify-end gap-3 border-b border-[#E5E0D8] pb-3 no-print">
+              <button
+                onClick={printInvoice}
+                className="px-4 py-2 bg-[#1C1B18] text-white hover:bg-black rounded-lg text-xs font-bold flex items-center gap-2 shadow-xs"
+              >
+                <Printer className="w-4 h-4" /> Print Confirmation Voucher
+              </button>
+            </div>
+
+            {/* Printable Voucher Sheet */}
+            <div id="printable-reservation-confirmation" className="p-6 bg-white rounded-xl border border-[#E5E0D8] space-y-6">
+              {/* Header */}
+              <div className="flex justify-between items-start border-b border-[#E5E0D8] pb-4">
+                <div className="flex items-center gap-3">
+                  <Logo size={36} />
+                  <div>
+                    <h1 className="text-lg font-bold text-[#1C1B18] leading-none">ARL's Hotel</h1>
+                    <span className="text-[10px] text-[#6E6B65] font-semibold uppercase tracking-wider">Official Reservation Confirmation Slip</span>
+                  </div>
+                </div>
+                <div className="text-right">
+                  <div className="font-mono text-sm font-bold text-[#C84B31]">{printingRes.reservationCode}</div>
+                  <div className="text-[11px] text-[#6E6B65]">Issued: {formatDate(printingRes.createdAt)}</div>
+                </div>
+              </div>
+
+              {/* Guest & Stay Grid */}
+              <div className="grid grid-cols-2 gap-4 bg-[#F5F2EC] p-4 rounded-xl border border-[#E5E0D8]">
+                <div>
+                  <span className="text-[10px] font-bold text-[#6E6B65] uppercase block">GUEST DETAILS</span>
+                  <div className="font-bold text-sm text-[#1C1B18] mt-0.5">{printingRes.guestName}</div>
+                  <div className="text-[11px] text-[#6E6B65] font-medium">{printingRes.guestPhone || printingRes.guestEmail}</div>
+                </div>
+
+                <div className="text-right">
+                  <span className="text-[10px] font-bold text-[#6E6B65] uppercase block">ASSIGNED ACCOMMODATION</span>
+                  <div className="font-bold text-sm text-[#C84B31] mt-0.5">Room {printingRes.roomNumber} ({printingRes.roomType})</div>
+                  <div className="text-[11px] text-[#6E6B65] font-medium">{printingRes.adults} Adults{printingRes.children > 0 ? `, ${printingRes.children} Kids` : ''}</div>
+                </div>
+              </div>
+
+              {/* Schedule Box */}
+              <div className="grid grid-cols-3 gap-3 p-3 bg-white rounded-lg border border-[#E5E0D8] text-center">
+                <div>
+                  <span className="text-[10px] font-bold text-[#6E6B65] uppercase block">CHECK-IN DATE</span>
+                  <span className="font-bold text-[#1C1B18] text-xs">{formatDate(printingRes.checkInDate)} (2:00 PM)</span>
+                </div>
+                <div>
+                  <span className="text-[10px] font-bold text-[#6E6B65] uppercase block">CHECK-OUT DATE</span>
+                  <span className="font-bold text-[#1C1B18] text-xs">{formatDate(printingRes.checkOutDate)} (12:00 PM)</span>
+                </div>
+                <div>
+                  <span className="text-[10px] font-bold text-[#6E6B65] uppercase block">DURATION</span>
+                  <span className="font-bold text-[#C84B31] text-xs">{printingRes.nights} Night(s)</span>
+                </div>
+              </div>
+
+              {/* Financial Ledger Summary */}
+              <div className="p-4 bg-[#F5F2EC] rounded-xl border border-[#E5E0D8] space-y-2">
+                <div className="flex justify-between font-medium text-[#6E6B65]">
+                  <span>Total Room Rate Billed:</span>
+                  <span className="font-bold text-[#1C1B18]">{formatCurrency(printingRes.totalAmount)}</span>
+                </div>
+                {printingBilling && (
+                  <>
+                    <div className="flex justify-between font-bold text-[#2D5A39]">
+                      <span>Advance Deposit Paid:</span>
+                      <span>{formatCurrency(printingBilling.paidAmount)}</span>
+                    </div>
+                    <div className="flex justify-between font-bold text-[#9A6208] pt-1 border-t border-[#E5E0D8]">
+                      <span>Balance Due Upon Check-In:</span>
+                      <span className="text-sm">{formatCurrency(printingBilling.balanceAmount)}</span>
+                    </div>
+                  </>
+                )}
+              </div>
+
+              {/* Terms & Policies */}
+              <div className="text-[10px] text-[#6E6B65] space-y-1 bg-white p-3 rounded-lg border border-[#E5E0D8]">
+                <div className="font-bold text-[#1C1B18]">Important Guest Guidelines:</div>
+                <div>• Standard Check-In time is 2:00 PM; Check-Out time is strictly 12:00 PM noon.</div>
+                <div>• Please present a valid government-issued photo ID upon check-in at front desk.</div>
+                <div>• Non-smoking suite policy enforced. A security deposit may be required upon check-in.</div>
+              </div>
+
+              {/* Signature Line */}
+              <div className="pt-6 grid grid-cols-2 gap-8 text-center text-xs">
+                <div className="space-y-6">
+                  <div className="border-b border-[#1C1B18] pb-1 font-bold">{printingRes.guestName}</div>
+                  <div className="text-[10px] text-[#6E6B65]">Guest Signature</div>
+                </div>
+                <div className="space-y-6">
+                  <div className="border-b border-[#1C1B18] pb-1 font-bold">Front Desk Officer</div>
+                  <div className="text-[10px] text-[#6E6B65]">Authorized Agent</div>
+                </div>
+              </div>
+            </div>
+
+            <div className="flex justify-end">
+              <button
+                onClick={() => setPrintingRes(null)}
+                className="px-5 py-2 zen-btn text-xs font-bold"
+              >
+                Close Window
+              </button>
+            </div>
+          </div>
+        )}
       </Modal>
     </div>
   );
