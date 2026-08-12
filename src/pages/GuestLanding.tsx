@@ -172,7 +172,7 @@ export const GuestLanding: React.FC<GuestLandingProps> = ({ onGoToAdmin }) => {
 
           <button
             onClick={onGoToAdmin}
-            className="px-5 py-2.5 bg-[#111111] hover:bg-black text-white text-xs font-bold rounded-full flex items-center gap-2 transition-all shadow-md hover:scale-105"
+            className="px-5 py-2.5 bg-[#111111] hover:bg-[#C84B31] text-white text-xs font-bold rounded-full flex items-center gap-2 transition-all shadow-md hover:scale-105"
           >
             <Lock className="w-3.5 h-3.5 text-[#C84B31]" /> Staff Admin Portal
           </button>

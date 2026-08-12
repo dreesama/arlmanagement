@@ -43,6 +43,16 @@ export const Reservations: React.FC = () => {
   const [children, setChildren] = useState<number>(0);
   const [specialRequests, setSpecialRequests] = useState('');
 
+  // Inline New Guest Form State inside Reservation Dialog
+  const [isCreatingNewGuest, setIsCreatingNewGuest] = useState(false);
+  const [newGuestName, setNewGuestName] = useState('');
+  const [newGuestEmail, setNewGuestEmail] = useState('');
+  const [newGuestPhone, setNewGuestPhone] = useState('');
+  const [newGuestIdType, setNewGuestIdType] = useState('Passport');
+  const [newGuestIdNumber, setNewGuestIdNumber] = useState('');
+  const [newGuestNationality, setNewGuestNationality] = useState('Filipino');
+  const [newGuestAddress, setNewGuestAddress] = useState('');
+
   useEffect(() => {
     loadData();
   }, []);
@@ -84,6 +94,14 @@ export const Reservations: React.FC = () => {
     setAdults(2);
     setChildren(0);
     setSpecialRequests('');
+    setIsCreatingNewGuest(false);
+    setNewGuestName('');
+    setNewGuestEmail('');
+    setNewGuestPhone('');
+    setNewGuestIdType('Passport');
+    setNewGuestIdNumber('');
+    setNewGuestNationality('Filipino');
+    setNewGuestAddress('');
     setIsModalOpen(true);
   };
 
@@ -96,24 +114,45 @@ export const Reservations: React.FC = () => {
     setAdults(res.adults);
     setChildren(res.children);
     setSpecialRequests(res.specialRequests || '');
+    setIsCreatingNewGuest(false);
     setIsModalOpen(true);
   };
 
   const handleSaveReservation = async (e: React.FormEvent) => {
     e.preventDefault();
-    const nights = calculateNights(checkInDate, checkOutDate);
-    const payload = {
-      guestId: Number(guestId),
-      roomId: Number(roomId),
-      checkInDate,
-      checkOutDate,
-      nights,
-      adults: Number(adults),
-      children: Number(children),
-      specialRequests,
-    };
-
     try {
+      let targetGuestId = Number(guestId);
+
+      // Create new guest inline if toggled
+      if (!editingRes && isCreatingNewGuest) {
+        if (!newGuestName.trim()) {
+          alert('Please enter guest full name');
+          return;
+        }
+        const createdGuest = await api.createGuest({
+          fullName: newGuestName,
+          email: newGuestEmail,
+          phone: newGuestPhone,
+          idType: newGuestIdType,
+          idNumber: newGuestIdNumber,
+          nationality: newGuestNationality,
+          address: newGuestAddress,
+        });
+        targetGuestId = createdGuest.id;
+      }
+
+      const nights = calculateNights(checkInDate, checkOutDate);
+      const payload = {
+        guestId: targetGuestId,
+        roomId: Number(roomId),
+        checkInDate,
+        checkOutDate,
+        nights,
+        adults: Number(adults),
+        children: Number(children),
+        specialRequests,
+      };
+
       if (editingRes) {
         await api.updateReservation(editingRes.id, { ...payload, status: editingRes.status });
       } else {
@@ -378,19 +417,98 @@ export const Reservations: React.FC = () => {
       >
         <form onSubmit={handleSaveReservation} className="space-y-4">
           <div>
-            <label className="block text-xs font-bold text-[#1C1B18] mb-1">Select Guest *</label>
-            <select
-              value={guestId}
-              onChange={(e) => setGuestId(Number(e.target.value))}
-              disabled={!!editingRes}
-              className="w-full px-3 py-2 zen-input text-xs text-[#1C1B18]"
-            >
-              {guests.map((g) => (
-                <option key={g.id} value={g.id}>
-                  {g.fullName} ({g.email || g.phone}) {g.isVip ? '★ VIP' : ''}
-                </option>
-              ))}
-            </select>
+            <div className="flex justify-between items-center mb-1">
+              <label className="block text-xs font-bold text-[#1C1B18]">Guest Account *</label>
+              {!editingRes && (
+                <button
+                  type="button"
+                  onClick={() => setIsCreatingNewGuest(!isCreatingNewGuest)}
+                  className="text-[11px] font-bold text-[#C84B31] hover:underline flex items-center gap-1"
+                >
+                  {isCreatingNewGuest ? '← Select Existing Guest' : '+ Register New Guest Inline'}
+                </button>
+              )}
+            </div>
+
+            {isCreatingNewGuest && !editingRes ? (
+              <div className="p-3.5 bg-[#F5F2EC] rounded-xl border border-[#E5E0D8] space-y-3">
+                <div className="font-bold text-xs text-[#1C1B18] border-b border-[#E5E0D8] pb-1">
+                  New Walk-In Guest Particulars
+                </div>
+                <div>
+                  <label className="block text-[11px] font-bold text-[#1C1B18] mb-0.5">Full Name *</label>
+                  <input
+                    type="text"
+                    required
+                    value={newGuestName}
+                    onChange={(e) => setNewGuestName(e.target.value)}
+                    placeholder="e.g. Juan dela Cruz"
+                    className="w-full px-3 py-1.5 zen-input text-xs text-[#1C1B18]"
+                  />
+                </div>
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <label className="block text-[11px] font-bold text-[#1C1B18] mb-0.5">Phone *</label>
+                    <input
+                      type="tel"
+                      required
+                      value={newGuestPhone}
+                      onChange={(e) => setNewGuestPhone(e.target.value)}
+                      placeholder="+63 917 123 4567"
+                      className="w-full px-3 py-1.5 zen-input text-xs text-[#1C1B18]"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[11px] font-bold text-[#1C1B18] mb-0.5">Email</label>
+                    <input
+                      type="email"
+                      value={newGuestEmail}
+                      onChange={(e) => setNewGuestEmail(e.target.value)}
+                      placeholder="guest@example.com"
+                      className="w-full px-3 py-1.5 zen-input text-xs text-[#1C1B18]"
+                    />
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <label className="block text-[11px] font-bold text-[#1C1B18] mb-0.5">ID Type & Number</label>
+                    <select
+                      value={newGuestIdType}
+                      onChange={(e) => setNewGuestIdType(e.target.value)}
+                      className="w-full px-2 py-1.5 zen-input text-xs text-[#1C1B18]"
+                    >
+                      <option value="Passport">Passport</option>
+                      <option value="Driver's License">Driver's License</option>
+                      <option value="National ID">National ID</option>
+                      <option value="SSS/GSIS ID">SSS/GSIS ID</option>
+                      <option value="Postal ID">Postal ID</option>
+                    </select>
+                  </div>
+                  <div className="pt-4">
+                    <input
+                      type="text"
+                      value={newGuestIdNumber}
+                      onChange={(e) => setNewGuestIdNumber(e.target.value)}
+                      placeholder="ID Number"
+                      className="w-full px-3 py-1.5 zen-input text-xs text-[#1C1B18]"
+                    />
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <select
+                value={guestId}
+                onChange={(e) => setGuestId(Number(e.target.value))}
+                disabled={!!editingRes}
+                className="w-full px-3 py-2 zen-input text-xs text-[#1C1B18]"
+              >
+                {guests.map((g) => (
+                  <option key={g.id} value={g.id}>
+                    {g.fullName} ({g.email || g.phone}) {g.isVip ? '★ VIP' : ''}
+                  </option>
+                ))}
+              </select>
+            )}
           </div>
 
           <div>
@@ -598,9 +716,9 @@ export const Reservations: React.FC = () => {
             <div className="flex justify-end gap-3 border-b border-[#E5E0D8] pb-3 no-print">
               <button
                 onClick={printInvoice}
-                className="px-4 py-2 bg-[#1C1B18] text-white hover:bg-black rounded-lg text-xs font-bold flex items-center gap-2 shadow-xs"
+                className="px-4 py-2 zen-btn-primary text-xs font-bold flex items-center gap-2 shadow-xs"
               >
-                <Printer className="w-4 h-4" /> Print Confirmation Voucher
+                <Printer className="w-4 h-4" /> Print Agreement Voucher
               </button>
             </div>
 

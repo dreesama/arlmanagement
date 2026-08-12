@@ -336,10 +336,10 @@ export const BillingPage: React.FC = () => {
                   </button>
                   <button
                     onClick={printInvoice}
-                    className="px-4 py-2 zen-btn text-xs font-bold flex items-center gap-1.5 bg-[#1C1B18] text-white hover:bg-black border-none"
-                    title="Print Official Folio Sheet"
+                    className="px-4 py-2 zen-btn-primary text-xs font-bold flex items-center gap-1.5 shadow-xs"
+                    title="Print Official Statement of Account"
                   >
-                    <Printer className="w-4 h-4" /> Print Folio Sheet
+                    <Printer className="w-4 h-4" /> Print Statement of Account
                   </button>
                 </div>
               </div>
@@ -352,8 +352,8 @@ export const BillingPage: React.FC = () => {
                     <div className="flex items-center gap-3">
                       <Logo size={36} />
                       <div>
-                        <h1 className="text-xl font-bold tracking-tight text-[#1C1B18] leading-none">ARL's Hotel</h1>
-                        <span className="text-[10px] text-[#6E6B65] font-semibold uppercase tracking-wider">Official Billing Folio Statement</span>
+                        <h1 className="text-lg font-bold text-[#1C1B18] leading-none">ARL's Hotel</h1>
+                        <span className="text-[10px] text-[#6E6B65] font-semibold uppercase tracking-wider">Official Statement of Account</span>
                       </div>
                     </div>
                     <p className="text-xs text-[#6E6B65] font-medium pt-1">123 Coastal Boulevard, Hotel District, Manila</p>
