@@ -150,6 +150,7 @@ export async function initDatabase() {
 
   seedDefaultAdminUser(database);
   seedHighQualityRoomMockData(database);
+  seedSampleGuestsAndBookings(database);
   saveDb();
 }
 
@@ -194,7 +195,7 @@ export function seedHighQualityRoomMockData(database: SqlDatabase) {
       bedType: 'Queen',
       capacity: 2,
       ratePerNight: 2500,
-      status: 'Available',
+      status: 'Occupied',
       amenities: JSON.stringify(['WiFi', 'AC', 'Smart TV', 'Mini Fridge']),
       description: 'Cozy Japandi minimalist hotel suite with natural wood furnishings, plush linens, and serene ambient lighting.',
       image: 'https://images.unsplash.com/photo-1618773928121-c32242e63f39?auto=format&fit=crop&w=1200&q=80',
@@ -206,7 +207,7 @@ export function seedHighQualityRoomMockData(database: SqlDatabase) {
       bedType: 'Queen',
       capacity: 2,
       ratePerNight: 2500,
-      status: 'Available',
+      status: 'Reserved',
       amenities: JSON.stringify(['WiFi', 'AC', 'Smart TV', 'Mini Fridge']),
       description: 'Ground floor hotel room featuring tatami mat accent headboard, organic cotton sheets, and rainfall shower.',
       image: 'https://images.unsplash.com/photo-1590490360182-c33d57733427?auto=format&fit=crop&w=1200&q=80',
@@ -242,7 +243,7 @@ export function seedHighQualityRoomMockData(database: SqlDatabase) {
       bedType: 'King',
       capacity: 3,
       ratePerNight: 4500,
-      status: 'Reserved',
+      status: 'Available',
       amenities: JSON.stringify(['WiFi', 'AC', 'Smart TV', 'Balcony', 'Bathtub']),
       description: 'Deluxe King Hotel Suite with shoji screen spatial dividers, mood lighting, and high-thread cotton duvet.',
       image: 'https://images.unsplash.com/photo-1631049307264-da0ec9d70304?auto=format&fit=crop&w=1200&q=80',
@@ -290,7 +291,7 @@ export function seedHighQualityRoomMockData(database: SqlDatabase) {
       bedType: 'Super King',
       capacity: 6,
       ratePerNight: 18000,
-      status: 'Reserved',
+      status: 'Available',
       amenities: JSON.stringify(['Private Elevator', 'Butler Service', 'Private Pool', 'Kitchenette', 'Home Theater', 'Panoramic View', 'Sauna']),
       description: 'Ultra-luxurious Presidential Suite master bedroom featuring panoramic floor-to-ceiling glass windows and 24/7 dedicated butler service.',
       image: 'https://images.unsplash.com/photo-1582719508461-905c673771fd?auto=format&fit=crop&w=1200&q=80',
@@ -305,6 +306,87 @@ export function seedHighQualityRoomMockData(database: SqlDatabase) {
   }
 }
 
+export function seedSampleGuestsAndBookings(database: SqlDatabase) {
+  const guestCount = queryObjects(database, 'SELECT COUNT(*) as count FROM guests');
+  if (guestCount.length === 0 || Number(guestCount[0].count) === 0) {
+    const todayStr = new Date().toISOString().split('T')[0];
+    const tomorrowStr = new Date(Date.now() + 86400000).toISOString().split('T')[0];
+
+    // Seed Guests
+    database.run(`
+      INSERT INTO guests (fullName, email, phone, idType, idNumber, address, nationality, isVip, notes, createdAt) VALUES
+      ('Alexander Wright', 'alex.wright@luxuryhotel.com', '+63 917 555 0192', 'Passport', 'P9823412A', '12 Bonifacio High Street, BGC, Taguig', 'Filipino', 1, 'VIP Corporate Executive Guest', ?),
+      ('Sophia Chen', 'sophia.chen@asia-corp.sg', '+65 9123 4567', 'Passport', 'SG8839201', 'Marina Bay Sands Towers, Singapore', 'Singaporean', 1, 'High Floor Preferred', ?),
+      ('Marcus Vance', 'marcus.vance@techlead.io', '+1 415 889 2011', 'Driver''s License', 'DL-CA-99201', 'Silicon Valley, California, USA', 'American', 0, 'Late check-out requested', ?)
+    `, [todayStr, todayStr, todayStr]);
+
+    const guests = queryObjects(database, 'SELECT id, fullName FROM guests ORDER BY id ASC');
+    const rooms = queryObjects(database, 'SELECT id, number, ratePerNight FROM rooms ORDER BY id ASC');
+
+    if (guests.length >= 2 && rooms.length >= 2) {
+      // Checked-In reservation for Room 101
+      const resCode1 = `ARL-${new Date().getFullYear()}-1001`;
+      database.run(`
+        INSERT INTO reservations (reservationCode, guestId, roomId, checkInDate, checkOutDate, nights, adults, children, status, totalAmount, specialRequests, actualCheckIn, createdAt)
+        VALUES (?, ?, ?, ?, ?, 1, 2, 0, 'Checked-In', ?, 'High floor, quiet room', ?, ?)
+      `, [resCode1, guests[0].id, rooms[0].id, todayStr, tomorrowStr, rooms[0].ratePerNight, todayStr, todayStr]);
+
+      database.run('UPDATE rooms SET status = "Occupied" WHERE id = ?', [rooms[0].id]);
+
+      const res1 = queryObjects(database, 'SELECT id FROM reservations WHERE reservationCode = ?', [resCode1])[0];
+      if (res1) {
+        const inv1 = `INV-${new Date().getFullYear()}-8801`;
+        const subtotal = rooms[0].ratePerNight;
+        const tax = subtotal * 0.12;
+        const service = subtotal * 0.10;
+        const grand = subtotal + tax + service;
+        database.run(`
+          INSERT INTO billings (invoiceNumber, reservationId, roomCharges, extraCharges, subtotal, taxAmount, serviceCharge, discountAmount, discountType, discountValue, grandTotal, paidAmount, balanceAmount, status, createdAt)
+          VALUES (?, ?, ?, 0, ?, ?, ?, 0, 'percentage', 0, ?, 0, ?, 'Unpaid', ?)
+        `, [inv1, res1.id, subtotal, subtotal, tax, service, grand, grand, todayStr]);
+
+        const bill1 = queryObjects(database, 'SELECT id FROM billings WHERE invoiceNumber = ?', [inv1])[0];
+        if (bill1) {
+          database.run(`
+            INSERT INTO billing_items (billingId, description, quantity, unitPrice, amount)
+            VALUES (?, ?, 1, ?, ?)
+          `, [bill1.id, `Room Charge (Room ${rooms[0].number} - 1 Night)`, rooms[0].ratePerNight, rooms[0].ratePerNight]);
+        }
+      }
+
+      // Confirmed reservation for Room 102
+      const resCode2 = `ARL-${new Date().getFullYear()}-1002`;
+      database.run(`
+        INSERT INTO reservations (reservationCode, guestId, roomId, checkInDate, checkOutDate, nights, adults, children, status, totalAmount, specialRequests, createdAt)
+        VALUES (?, ?, ?, ?, ?, 2, 1, 0, 'Confirmed', ?, 'Extra towels', ?)
+      `, [resCode2, guests[1].id, rooms[1].id, todayStr, tomorrowStr, rooms[1].ratePerNight * 2, todayStr]);
+
+      database.run('UPDATE rooms SET status = "Reserved" WHERE id = ?', [rooms[1].id]);
+
+      const res2 = queryObjects(database, 'SELECT id FROM reservations WHERE reservationCode = ?', [resCode2])[0];
+      if (res2) {
+        const inv2 = `INV-${new Date().getFullYear()}-8802`;
+        const subtotal = rooms[1].ratePerNight * 2;
+        const tax = subtotal * 0.12;
+        const service = subtotal * 0.10;
+        const grand = subtotal + tax + service;
+        database.run(`
+          INSERT INTO billings (invoiceNumber, reservationId, roomCharges, extraCharges, subtotal, taxAmount, serviceCharge, discountAmount, discountType, discountValue, grandTotal, paidAmount, balanceAmount, status, createdAt)
+          VALUES (?, ?, ?, 0, ?, ?, ?, 0, 'percentage', 0, ?, 0, ?, 'Unpaid', ?)
+        `, [inv2, res2.id, subtotal, subtotal, tax, service, grand, grand, todayStr]);
+
+        const bill2 = queryObjects(database, 'SELECT id FROM billings WHERE invoiceNumber = ?', [inv2])[0];
+        if (bill2) {
+          database.run(`
+            INSERT INTO billing_items (billingId, description, quantity, unitPrice, amount)
+            VALUES (?, ?, 2, ?, ?)
+          `, [bill2.id, `Room Charge (Room ${rooms[1].number} - 2 Nights)`, rooms[1].ratePerNight, subtotal]);
+        }
+      }
+    }
+  }
+}
+
 export function wipeAllMockData(database: SqlDatabase) {
   database.run('DELETE FROM rooms');
   database.run('DELETE FROM guests');
@@ -312,6 +394,8 @@ export function wipeAllMockData(database: SqlDatabase) {
   database.run('DELETE FROM billings');
   database.run('DELETE FROM billing_items');
   database.run('DELETE FROM payments');
+  seedHighQualityRoomMockData(database);
+  seedSampleGuestsAndBookings(database);
   saveDb();
 }
 
