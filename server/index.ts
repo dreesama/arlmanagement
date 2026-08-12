@@ -234,53 +234,71 @@ app.get('/api/reservations', async (req, res) => {
 });
 
 app.post('/api/reservations', async (req, res) => {
-  const { guestId, roomId, checkInDate, checkOutDate, nights, adults, children, specialRequests } = req.body;
-  const createdAt = new Date().toISOString().split('T')[0];
-  const reservationCode = `ARL-${new Date().getFullYear()}-${Math.floor(1000 + Math.random() * 9000)}`;
+  try {
+    const { guestId, roomId, checkInDate, checkOutDate, nights, adults, children, specialRequests } = req.body;
+    const createdAt = new Date().toISOString().split('T')[0];
+    const reservationCode = `ARL-${new Date().getFullYear()}-${Math.floor(1000 + Math.random() * 9000)}`;
 
-  const db = await getDb();
-  const rooms = queryObjects(db, 'SELECT ratePerNight, number FROM rooms WHERE id = ?', [roomId]);
-  const ratePerNight = rooms.length > 0 ? rooms[0].ratePerNight : 2500;
-  const roomNumber = rooms.length > 0 ? rooms[0].number : '';
-  const totalAmount = ratePerNight * (nights || 1);
+    const db = await getDb();
+    const rooms = queryObjects(db, 'SELECT ratePerNight, number, status FROM rooms WHERE id = ?', [roomId]);
+    if (rooms.length === 0) {
+      return res.status(400).json({ error: 'Selected room does not exist.' });
+    }
 
-  db.run(
-    `INSERT INTO reservations (reservationCode, guestId, roomId, checkInDate, checkOutDate, nights, adults, children, status, totalAmount, specialRequests, createdAt) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'Confirmed', ?, ?, ?)`,
-    [reservationCode, guestId, roomId, checkInDate, checkOutDate, nights, adults, children, totalAmount, specialRequests, createdAt]
-  );
-  db.run('UPDATE rooms SET status = "Reserved" WHERE id = ?', [roomId]);
+    const ratePerNight = rooms[0].ratePerNight;
+    const roomNumber = rooms[0].number;
+    const totalAmount = ratePerNight * (nights || 1);
 
-  const createdRes = queryObjects(db, 'SELECT id FROM reservations WHERE reservationCode = ?', [reservationCode])[0];
-  const resId = createdRes.id;
+    db.run(
+      `INSERT INTO reservations (reservationCode, guestId, roomId, checkInDate, checkOutDate, nights, adults, children, status, totalAmount, specialRequests, createdAt) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'Confirmed', ?, ?, ?)`,
+      [reservationCode, Number(guestId), Number(roomId), checkInDate, checkOutDate, Number(nights), Number(adults), Number(children), totalAmount, specialRequests || '', createdAt]
+    );
 
-  const invoiceNumber = `INV-${new Date().getFullYear()}-${Math.floor(1000 + Math.random() * 9000)}`;
-  const subtotal = totalAmount;
-  const taxAmount = subtotal * 0.12;
-  const serviceCharge = subtotal * 0.10;
-  const grandTotal = subtotal + taxAmount + serviceCharge;
+    // Only update room status if not already occupied
+    if (rooms[0].status !== 'Occupied') {
+      db.run('UPDATE rooms SET status = "Reserved" WHERE id = ?', [roomId]);
+    }
 
-  db.run(
-    `INSERT INTO billings (invoiceNumber, reservationId, roomCharges, extraCharges, subtotal, taxAmount, serviceCharge, discountAmount, discountType, discountValue, grandTotal, paidAmount, balanceAmount, status, createdAt) VALUES (?, ?, ?, 0, ?, ?, ?, 0, 'percentage', 0, ?, 0, ?, 'Unpaid', ?)`,
-    [invoiceNumber, resId, totalAmount, subtotal, taxAmount, serviceCharge, grandTotal, grandTotal, createdAt]
-  );
+    const createdResRows = queryObjects(db, 'SELECT id FROM reservations WHERE reservationCode = ?', [reservationCode]);
+    if (!createdResRows || createdResRows.length === 0) {
+      throw new Error('Failed to retrieve created reservation.');
+    }
+    const resId = createdResRows[0].id;
 
-  const billingRow = queryObjects(db, 'SELECT id FROM billings WHERE invoiceNumber = ?', [invoiceNumber])[0];
-  db.run(
-    `INSERT INTO billing_items (billingId, description, quantity, unitPrice, amount) VALUES (?, ?, ?, ?, ?)`,
-    [billingRow.id, `Room Charge (${roomNumber} - ${nights} night/s)`, nights, ratePerNight, totalAmount]
-  );
+    const invoiceNumber = `INV-${new Date().getFullYear()}-${Math.floor(1000 + Math.random() * 9000)}`;
+    const subtotal = totalAmount;
+    const taxAmount = subtotal * 0.12;
+    const serviceCharge = subtotal * 0.10;
+    const grandTotal = subtotal + taxAmount + serviceCharge;
 
-  saveDb();
+    db.run(
+      `INSERT INTO billings (invoiceNumber, reservationId, roomCharges, extraCharges, subtotal, taxAmount, serviceCharge, discountAmount, discountType, discountValue, grandTotal, paidAmount, balanceAmount, status, createdAt) VALUES (?, ?, ?, 0, ?, ?, ?, 0, 'percentage', 0, ?, 0, ?, 'Unpaid', ?)`,
+      [invoiceNumber, resId, totalAmount, subtotal, taxAmount, serviceCharge, grandTotal, grandTotal, createdAt]
+    );
 
-  const createdFull = queryObjects(db, `
-    SELECT r.*, g.fullName as guestName, g.email as guestEmail, g.phone as guestPhone, rm.number as roomNumber, rm.type as roomType
-    FROM reservations r
-    JOIN guests g ON r.guestId = g.id
-    JOIN rooms rm ON r.roomId = rm.id
-    WHERE r.id = ?
-  `, [resId])[0];
+    const billingRows = queryObjects(db, 'SELECT id FROM billings WHERE invoiceNumber = ?', [invoiceNumber]);
+    if (billingRows && billingRows.length > 0) {
+      db.run(
+        `INSERT INTO billing_items (billingId, description, quantity, unitPrice, amount) VALUES (?, ?, ?, ?, ?)`,
+        [billingRows[0].id, `Room Charge (${roomNumber} - ${nights} night/s)`, nights, ratePerNight, totalAmount]
+      );
+    }
 
-  res.status(201).json(createdFull);
+    saveDb();
+
+    const createdFull = queryObjects(db, `
+      SELECT r.*, g.fullName as guestName, g.email as guestEmail, g.phone as guestPhone, rm.number as roomNumber, rm.type as roomType
+      FROM reservations r
+      JOIN guests g ON r.guestId = g.id
+      JOIN rooms rm ON r.roomId = rm.id
+      WHERE r.id = ?
+    `, [resId])[0];
+
+    res.status(201).json(createdFull);
+  } catch (err: any) {
+    console.error('API Error in POST /api/reservations:', err);
+    res.status(500).json({ error: err.message || 'Internal Server Error' });
+  }
 });
 
 app.put('/api/reservations/:id', async (req, res) => {

@@ -136,11 +136,11 @@ select option {
 }
 
 /* ------------------------------------------------------------- */
-/* PRINTING CSS RULES FOR LUXURY HOTEL STATEMENTS & RECEIPTS */
+/* PRINTING CSS RULES FOR REAL-WORLD 5-STAR HOTEL STATEMENTS & RECEIPTS */
 /* ------------------------------------------------------------- */
 @page {
   size: letter portrait; /* Standard Short Bond Paper: 8.5" x 11" */
-  margin: 8mm;
+  margin: 10mm;
 }
 
 @media print {
@@ -165,31 +165,50 @@ select option {
     width: 100%;
     max-width: 8.5in;
     margin: 0 auto;
-    padding: 20px !important;
+    padding: 0 !important;
     background: white !important;
-    color: #1C1B18 !important;
-    border: 1px solid #E5E0D8 !important;
-    border-top: 4px solid #C84B31 !important;
-    border-radius: 12px !important;
+    color: #111111 !important;
+    border: none !important;
+    border-radius: 0 !important;
     box-shadow: none !important;
     font-size: 11px !important;
-    line-height: 1.4 !important;
+    line-height: 1.35 !important;
     font-family: 'Montserrat', sans-serif !important;
   }
 
-  /* Table Header Charcoal Luxury Styling */
+  /* Real-World Hotel Table Styling */
+  #printable-invoice table,
+  #printable-registration-card table,
+  #printable-reservation-confirmation table,
+  #printable-checkout-receipt table,
+  #printable-active-folio table {
+    width: 100% !important;
+    border-collapse: collapse !important;
+  }
+
   #printable-invoice table th,
   #printable-registration-card table th,
   #printable-reservation-confirmation table th,
   #printable-checkout-receipt table th,
   #printable-active-folio table th {
-    background-color: #1C1B18 !important;
-    color: white !important;
+    background-color: transparent !important;
+    color: #111111 !important;
     font-weight: 700 !important;
     text-transform: uppercase !important;
     letter-spacing: 0.05em !important;
     font-size: 10px !important;
-    padding: 8px 12px !important;
+    padding: 6px 4px !important;
+    border-top: 1.5px solid #111111 !important;
+    border-bottom: 1.5px solid #111111 !important;
+  }
+
+  #printable-invoice table td,
+  #printable-registration-card table td,
+  #printable-reservation-confirmation table td,
+  #printable-checkout-receipt table td,
+  #printable-active-folio table td {
+    padding: 5px 4px !important;
+    border-bottom: 1px solid #E5E0D8 !important;
   }
 
   /* Compact Spacing for Short Paper Fit */

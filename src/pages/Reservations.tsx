@@ -88,7 +88,8 @@ export const Reservations: React.FC = () => {
   const handleOpenCreate = () => {
     setEditingRes(null);
     if (guests.length > 0) setGuestId(guests[0].id);
-    if (rooms.length > 0) setRoomId(rooms[0].id);
+    const availRoom = rooms.find((r) => r.status === 'Available') || rooms[0];
+    if (availRoom) setRoomId(availRoom.id);
     setCheckInDate(new Date().toISOString().split('T')[0]);
     setCheckOutDate(new Date(Date.now() + 86400000).toISOString().split('T')[0]);
     setAdults(2);
@@ -121,6 +122,12 @@ export const Reservations: React.FC = () => {
   const handleSaveReservation = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
+      const selectedRoomObj = rooms.find((r) => r.id === Number(roomId));
+      if (!editingRes && selectedRoomObj && selectedRoomObj.status === 'Occupied') {
+        alert(`⚠️ Room ${selectedRoomObj.number} is currently Occupied by an active guest.\n\nPlease assign an Available room or perform check-out for Room ${selectedRoomObj.number} first.`);
+        return;
+      }
+
       let targetGuestId = Number(guestId);
 
       // Create new guest inline if toggled
@@ -519,8 +526,12 @@ export const Reservations: React.FC = () => {
               className="w-full px-3 py-2 zen-input text-xs text-[#1C1B18]"
             >
               {rooms.map((r) => (
-                <option key={r.id} value={r.id}>
-                  Room {r.number} — {r.type} ({formatCurrency(r.ratePerNight)}/night) [{r.status}]
+                <option
+                  key={r.id}
+                  value={r.id}
+                  disabled={!editingRes && r.status === 'Occupied'}
+                >
+                  Room {r.number} — {r.type} ({formatCurrency(r.ratePerNight)}/night) {r.status === 'Occupied' ? '⛔ [Occupied]' : `[${r.status}]`}
                 </option>
               ))}
             </select>

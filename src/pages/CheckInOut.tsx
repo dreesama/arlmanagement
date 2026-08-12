@@ -855,73 +855,119 @@ export const CheckInOut: React.FC = () => {
 
               {/* RIGHT COLUMN: Live Printable Statement & Receipt Preview (lg:col-span-7) */}
               <div className="lg:col-span-7">
-                <div id="printable-active-folio" className="p-6 bg-white rounded-xl border border-[#E5E0D8] space-y-5 shadow-xs">
-                  <div className="flex justify-between items-start border-b border-[#E5E0D8] pb-4">
+                {/* Printable Realistic 5-Star Hotel Statement of Account */}
+                <div id="printable-active-folio" className="p-6 bg-white text-[#111111] space-y-4 border border-[#E5E0D8] rounded-xl shadow-xs">
+                  {/* Hotel Official Letterhead */}
+                  <div className="flex justify-between items-start border-b-2 border-black pb-3">
                     <div className="flex items-center gap-3">
-                      <Logo size={36} />
+                      <Logo size={38} />
                       <div>
-                        <h1 className="text-lg font-bold text-[#1C1B18] leading-none">ARL's Hotel</h1>
-                        <span className="text-[10px] text-[#6E6B65] font-semibold uppercase tracking-wider">Statement of Account & Official Receipt</span>
+                        <h1 className="text-xl font-bold tracking-tight text-black leading-none uppercase">ARL's Hotel & Resort</h1>
+                        <p className="text-[10px] text-[#444444] font-semibold tracking-wider uppercase mt-1">123 Coastal Boulevard, Hotel District, Manila</p>
+                        <p className="text-[10px] text-[#666666]">TIN: 009-887-654-000 • Tel: +63 (2) 8123-4567 • info@arlshotel.com</p>
                       </div>
                     </div>
-                    <div className="text-right">
+                    <div className="text-right space-y-0.5">
+                      <div className="text-xs font-bold uppercase tracking-wider text-black">STATEMENT OF ACCOUNT</div>
                       <div className="font-mono text-sm font-bold text-[#C84B31]">{incidentalBilling?.invoiceNumber}</div>
-                      <div className="text-[11px] text-[#6E6B65]">Date: {formatDate(todayStr)}</div>
+                      <div className="text-[10px] text-[#666666]">Date: {formatDate(todayStr)}</div>
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-2 gap-4 bg-[#F5F2EC] p-3 rounded-xl border border-[#E5E0D8]">
-                    <div>
-                      <span className="text-[10px] font-bold text-[#6E6B65] uppercase block">GUEST NAME</span>
-                      <div className="font-bold text-sm text-[#1C1B18]">{incidentalModalRes.guestName}</div>
-                      <div className="text-[11px] text-[#6E6B65]">Room {incidentalModalRes.roomNumber} ({incidentalModalRes.roomType})</div>
+                  {/* Guest Particulars Table */}
+                  <div className="grid grid-cols-2 gap-4 text-xs py-2 border-b border-gray-300">
+                    <div className="space-y-1">
+                      <div><span className="font-bold text-[#666666] uppercase text-[10px]">Guest Name:</span> <span className="font-bold text-black">{incidentalModalRes.guestName}</span></div>
+                      <div><span className="font-bold text-[#666666] uppercase text-[10px]">Room Assignment:</span> <span className="font-bold text-[#C84B31]">Room {incidentalModalRes.roomNumber} ({incidentalModalRes.roomType})</span></div>
+                      <div><span className="font-bold text-[#666666] uppercase text-[10px]">Billing Code:</span> <span className="font-mono">{incidentalModalRes.reservationCode}</span></div>
                     </div>
-                    <div className="text-right">
-                      <span className="text-[10px] font-bold text-[#6E6B65] uppercase block">STAY DURATION</span>
-                      <div className="font-bold text-xs text-[#1C1B18]">{formatDate(incidentalModalRes.checkInDate)} → {formatDate(incidentalModalRes.checkOutDate)}</div>
-                      <div className="text-[11px] text-[#6E6B65]">{incidentalModalRes.nights} Night(s)</div>
+                    <div className="space-y-1 text-right">
+                      <div><span className="font-bold text-[#666666] uppercase text-[10px]">Arrival Date:</span> <span className="font-bold text-black">{formatDate(incidentalModalRes.checkInDate)}</span></div>
+                      <div><span className="font-bold text-[#666666] uppercase text-[10px]">Departure Date:</span> <span className="font-bold text-black">{formatDate(incidentalModalRes.checkOutDate)}</span></div>
+                      <div><span className="font-bold text-[#666666] uppercase text-[10px]">Duration:</span> <span className="font-bold text-black">{incidentalModalRes.nights} Night(s)</span></div>
                     </div>
                   </div>
 
+                  {/* Itemized Particulars Ledger */}
                   {incidentalBilling && (
-                    <div className="p-4 bg-white rounded-xl border border-[#E5E0D8] space-y-2">
-                      <div className="flex justify-between font-bold text-xs text-[#1C1B18] border-b border-[#E5E0D8] pb-1">
-                        <span>ITEMIZED PARTICULAR</span>
-                        <span>AMOUNT (₱)</span>
-                      </div>
-                      {incidentalBilling.items && incidentalBilling.items.map((item: any, idx: number) => (
-                        <div key={idx} className="flex justify-between text-xs py-1 border-b border-[#E5E0D8]/60">
-                          <span>{item.description} (×{item.quantity})</span>
-                          <span className="font-bold text-[#1C1B18]">{formatCurrency(item.amount)}</span>
+                    <div className="space-y-3 pt-1">
+                      <table className="w-full text-left text-xs border-collapse">
+                        <thead>
+                          <tr className="border-t-2 border-b-2 border-black text-[10px] uppercase font-bold text-black">
+                            <th className="py-1.5 px-1">Date</th>
+                            <th className="py-1.5 px-1">Description & Particulars</th>
+                            <th className="py-1.5 px-1 text-center">Qty</th>
+                            <th className="py-1.5 px-1 text-right">Charges (₱)</th>
+                            <th className="py-1.5 px-1 text-right">Credits (₱)</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-gray-200">
+                          {incidentalBilling.items && incidentalBilling.items.map((item: any, idx: number) => (
+                            <tr key={idx} className="text-xs">
+                              <td className="py-1.5 px-1 text-[#666666]">{formatDate(todayStr)}</td>
+                              <td className="py-1.5 px-1 font-medium text-black">{item.description}</td>
+                              <td className="py-1.5 px-1 text-center text-[#666666]">{item.quantity}</td>
+                              <td className="py-1.5 px-1 text-right font-bold text-black">{formatCurrency(item.amount)}</td>
+                              <td className="py-1.5 px-1 text-right text-[#666666]">₱0.00</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+
+                      {/* Totals Summary */}
+                      <div className="flex justify-end pt-2">
+                        <div className="w-64 space-y-1 text-xs">
+                          <div className="flex justify-between text-[#666666]">
+                            <span>Subtotal Charges:</span>
+                            <span className="font-bold text-black">{formatCurrency(incidentalBilling.subtotal || incidentalBilling.grandTotal)}</span>
+                          </div>
+                          <div className="flex justify-between text-[#666666]">
+                            <span>VAT Tax (12%):</span>
+                            <span className="font-bold text-black">{formatCurrency(incidentalBilling.taxAmount || 0)}</span>
+                          </div>
+                          <div className="flex justify-between text-[#666666]">
+                            <span>Service Charge (10%):</span>
+                            <span className="font-bold text-black">{formatCurrency(incidentalBilling.serviceCharge || 0)}</span>
+                          </div>
+                          <div className="flex justify-between text-[#2D5A39] font-bold">
+                            <span>Total Payments Received:</span>
+                            <span>−{formatCurrency(incidentalBilling.paidAmount || 0)}</span>
+                          </div>
+                          <div className="flex justify-between text-sm font-extrabold text-black pt-1.5 border-t-2 border-black">
+                            <span>NET BALANCE DUE:</span>
+                            <span className="text-[#C84B31]">{formatCurrency(incidentalBilling.balanceAmount)}</span>
+                          </div>
                         </div>
-                      ))}
-                      <div className="flex justify-between text-xs text-[#6E6B65] pt-2 border-t border-[#E5E0D8]">
-                        <span>Total Billed Volume:</span>
-                        <span className="font-bold text-[#1C1B18]">{formatCurrency(incidentalBilling.grandTotal)}</span>
-                      </div>
-                      <div className="flex justify-between text-xs text-[#2D5A39] font-bold">
-                        <span>Total Payments Received:</span>
-                        <span>{formatCurrency(incidentalBilling.paidAmount)}</span>
-                      </div>
-                      <div className="flex justify-between text-sm font-extrabold text-[#1C1B18] pt-2 border-t border-[#E5E0D8]">
-                        <span>Current Balance Due:</span>
-                        <span className="text-[#C84B31]">{formatCurrency(incidentalBilling.balanceAmount)}</span>
                       </div>
                     </div>
                   )}
 
-                  <div className="pt-6 grid grid-cols-2 gap-8 text-center text-xs">
-                    <div className="space-y-5">
-                      <div className="border-b border-[#1C1B18] pb-1 font-bold text-[#1C1B18]">
-                        {incidentalModalRes.guestName}
+                  {/* Philippine Hotel Tax Breakdown Box */}
+                  <div className="grid grid-cols-4 gap-2 text-[9px] p-2 border border-gray-300 text-center font-mono bg-gray-50 uppercase">
+                    <div><span className="text-gray-500 block">VATable Sales</span> <span className="font-bold text-black">{formatCurrency(incidentalBilling?.subtotal || 0)}</span></div>
+                    <div><span className="text-gray-500 block">VAT Amount (12%)</span> <span className="font-bold text-black">{formatCurrency(incidentalBilling?.taxAmount || 0)}</span></div>
+                    <div><span className="text-gray-500 block">VAT Exempt Sales</span> <span className="font-bold text-black">₱0.00</span></div>
+                    <div><span className="text-gray-500 block">Zero Rated Sales</span> <span className="font-bold text-black">₱0.00</span></div>
+                  </div>
+
+                  {/* Legal Statement & Signature Lines */}
+                  <div className="pt-4 space-y-4">
+                    <p className="text-[9px] text-gray-500 italic leading-tight text-justify">
+                      I agree that my liability for this invoice is not waived and I agree to be held personally liable in the event that the indicated person, company, or association fails to pay for any part or full amount of these charges.
+                    </p>
+                    <div className="grid grid-cols-2 gap-8 text-center text-xs pt-4">
+                      <div className="space-y-4">
+                        <div className="border-b border-black pb-1 font-bold text-black uppercase text-[11px]">
+                          {incidentalModalRes.guestName}
+                        </div>
+                        <div className="text-[9px] font-bold uppercase tracking-wider text-gray-600">Guest Signature over Printed Name</div>
                       </div>
-                      <div className="text-[10px] text-[#6E6B65]">Guest Signature</div>
-                    </div>
-                    <div className="space-y-5">
-                      <div className="border-b border-[#1C1B18] pb-1 font-bold text-[#1C1B18]">
-                        Front Desk Receptionist
+                      <div className="space-y-4">
+                        <div className="border-b border-black pb-1 font-bold text-black uppercase text-[11px]">
+                          Front Desk Receptionist / Cashier
+                        </div>
+                        <div className="text-[9px] font-bold uppercase tracking-wider text-gray-600">Authorized Front Desk Signature</div>
                       </div>
-                      <div className="text-[10px] text-[#6E6B65]">Cashier / Front Desk Signature</div>
                     </div>
                   </div>
                 </div>
