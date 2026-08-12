@@ -421,6 +421,83 @@ app.post('/api/reservations/:id/checkin', async (req, res) => {
   res.json({ success: true, checkInTime });
 });
 
+app.post('/api/reservations/:id/extend', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { additionalNights, newCheckOutDate } = req.body;
+    const db = await getDb();
+
+    const resRows = queryObjects(db, `
+      SELECT r.*, rm.ratePerNight, rm.number as roomNumber
+      FROM reservations r
+      JOIN rooms rm ON r.roomId = rm.id
+      WHERE r.id = ?
+    `, [id]);
+
+    if (resRows.length === 0) {
+      return res.status(404).json({ error: 'Reservation not found' });
+    }
+
+    const reservation = resRows[0];
+    const addNights = Number(additionalNights) || 1;
+    const updatedNights = (reservation.nights || 1) + addNights;
+
+    let updatedCheckOutDate = newCheckOutDate;
+    if (!updatedCheckOutDate) {
+      const currentOut = new Date(reservation.checkOutDate);
+      currentOut.setDate(currentOut.getDate() + addNights);
+      updatedCheckOutDate = currentOut.toISOString().split('T')[0];
+    }
+
+    const extensionCharge = reservation.ratePerNight * addNights;
+    const updatedTotalAmount = reservation.totalAmount + extensionCharge;
+
+    // 1. Update Reservation
+    db.run(
+      `UPDATE reservations SET checkOutDate = ?, nights = ?, totalAmount = ? WHERE id = ?`,
+      [updatedCheckOutDate, updatedNights, updatedTotalAmount, id]
+    );
+
+    // 2. Update Billing Statement and append line item
+    const billingRows = queryObjects(db, 'SELECT * FROM billings WHERE reservationId = ?', [id]);
+    if (billingRows.length > 0) {
+      const billing = billingRows[0];
+      const newRoomCharges = billing.roomCharges + extensionCharge;
+      const newSubtotal = billing.subtotal + extensionCharge;
+      const newTaxAmount = newSubtotal * 0.12;
+      const newServiceCharge = newSubtotal * 0.10;
+      const newGrandTotal = newSubtotal + newTaxAmount + newServiceCharge;
+      const newBalanceAmount = Math.max(0, newGrandTotal - billing.paidAmount);
+      const newStatus = newBalanceAmount <= 0 ? 'Paid' : (billing.paidAmount > 0 ? 'Partial' : 'Unpaid');
+
+      db.run(
+        `UPDATE billings SET roomCharges = ?, subtotal = ?, taxAmount = ?, serviceCharge = ?, grandTotal = ?, balanceAmount = ?, status = ? WHERE id = ?`,
+        [newRoomCharges, newSubtotal, newTaxAmount, newServiceCharge, newGrandTotal, newBalanceAmount, newStatus, billing.id]
+      );
+
+      db.run(
+        `INSERT INTO billing_items (billingId, description, quantity, unitPrice, amount) VALUES (?, ?, ?, ?, ?)`,
+        [billing.id, `Stay Extension (+${addNights} night/s, Room ${reservation.roomNumber})`, addNights, reservation.ratePerNight, extensionCharge]
+      );
+    }
+
+    saveDb();
+
+    const updatedFull = queryObjects(db, `
+      SELECT r.*, g.fullName as guestName, g.email as guestEmail, g.phone as guestPhone, rm.number as roomNumber, rm.type as roomType
+      FROM reservations r
+      JOIN guests g ON r.guestId = g.id
+      JOIN rooms rm ON r.roomId = rm.id
+      WHERE r.id = ?
+    `, [id])[0];
+
+    res.json({ success: true, reservation: updatedFull, addedNights: addNights, extensionCharge });
+  } catch (err: any) {
+    console.error('Error extending reservation stay:', err);
+    res.status(500).json({ error: err.message || 'Failed to extend stay' });
+  }
+});
+
 app.post('/api/reservations/:id/checkout', async (req, res) => {
   const { id } = req.params;
   const checkOutTime = new Date().toISOString().replace('T', ' ').substring(0, 16);

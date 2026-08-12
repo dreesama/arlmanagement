@@ -46,6 +46,7 @@ export const api = {
   cancelReservation: (id: number) => fetchJson<{ success: boolean }>(`/reservations/${id}/cancel`, { method: 'PATCH' }),
   checkInReservation: (id: number) => fetchJson<{ success: boolean; checkInTime: string }>(`/reservations/${id}/checkin`, { method: 'POST' }),
   checkOutReservation: (id: number) => fetchJson<{ success: boolean; checkOutTime: string }>(`/reservations/${id}/checkout`, { method: 'POST' }),
+  extendReservation: (id: number, data: { additionalNights: number; newCheckOutDate?: string }) => fetchJson<{ success: boolean; reservation: Reservation; addedNights: number; extensionCharge: number }>(`/reservations/${id}/extend`, { method: 'POST', body: JSON.stringify(data) }),
 
   // Billings
   getBillings: () => fetchJson<Billing[]>('/billings'),

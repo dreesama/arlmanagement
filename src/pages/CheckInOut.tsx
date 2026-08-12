@@ -15,6 +15,7 @@ import {
   ShieldCheck,
   Trash2,
   Edit2,
+  CalendarPlus,
 } from 'lucide-react';
 import { Reservation, Guest, Room, PaymentMethod, BillingItem } from '../types';
 import { api } from '../lib/api';
@@ -28,6 +29,10 @@ export const CheckInOut: React.FC = () => {
   const [guests, setGuests] = useState<Guest[]>([]);
   const [rooms, setRooms] = useState<Room[]>([]);
   const [loading, setLoading] = useState(true);
+
+  // Extend Stay Modal State
+  const [extendModalRes, setExtendModalRes] = useState<Reservation | null>(null);
+  const [extendNights, setExtendNights] = useState<number>(1);
 
   // Pre-Check-In & Registration Card Modal State
   const [checkinModalRes, setCheckinModalRes] = useState<Reservation | null>(null);
@@ -223,6 +228,26 @@ export const CheckInOut: React.FC = () => {
       loadData();
     } catch (err: any) {
       alert(`Error recording payment: ${err.message}`);
+    }
+  };
+
+  const handleConfirmExtendStay = async () => {
+    if (!extendModalRes) return;
+    try {
+      const result = await api.extendReservation(extendModalRes.id, { additionalNights: Number(extendNights) });
+      alert(`✅ Stay extended successfully by +${result.addedNights} night(s) for Room ${result.reservation.roomNumber} (${result.reservation.guestName})!\n\nAdditional Room Charge: ${formatCurrency(result.extensionCharge)}`);
+      setExtendModalRes(null);
+
+      // If active guest incidental modal is open for this reservation, update its statement
+      if (incidentalModalRes && incidentalModalRes.id === result.reservation.id) {
+        setIncidentalModalRes(result.reservation);
+        const billingData = await api.getBillingById(result.reservation.id);
+        setIncidentalBilling(billingData);
+      }
+
+      loadData();
+    } catch (err: any) {
+      alert(`Error extending stay: ${err.message}`);
     }
   };
 
@@ -457,6 +482,16 @@ export const CheckInOut: React.FC = () => {
                           <FileText className="w-3 h-3 text-[#C84B31]" /> Guest Account & Charges
                         </button>
                         <button
+                          onClick={() => {
+                            setExtendModalRes(res);
+                            setExtendNights(1);
+                          }}
+                          className="px-2.5 py-1.5 zen-btn text-xs font-bold text-[#2D5A39] flex items-center gap-1"
+                          title="Extend stay duration (+N nights)"
+                        >
+                          <CalendarPlus className="w-3 h-3 text-[#2D5A39]" /> Extend Stay
+                        </button>
+                        <button
                           onClick={() => handleOpenCheckoutModal(res)}
                           className="px-3 py-1.5 zen-btn text-[#9A6208] text-[11px] font-bold transition-all flex items-center gap-1"
                         >
@@ -634,12 +669,24 @@ export const CheckInOut: React.FC = () => {
               <span className="font-bold text-[#6E6B65] flex items-center gap-1.5">
                 <FileText className="w-4 h-4 text-[#C84B31]" /> Guest Account Ledger & Incidentals Station
               </span>
-              <button
-                onClick={printInvoice}
-                className="px-4 py-2 zen-btn-primary text-xs font-bold flex items-center gap-2 shadow-xs"
-              >
-                <Printer className="w-4 h-4" /> Print Statement of Account
-              </button>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setExtendModalRes(incidentalModalRes);
+                    setExtendNights(1);
+                  }}
+                  className="px-3.5 py-2 zen-btn text-xs font-bold text-[#2D5A39] flex items-center gap-1.5 shadow-xs"
+                >
+                  <CalendarPlus className="w-4 h-4 text-[#2D5A39]" /> Extend Stay
+                </button>
+                <button
+                  onClick={printInvoice}
+                  className="px-4 py-2 zen-btn-primary text-xs font-bold flex items-center gap-2 shadow-xs"
+                >
+                  <Printer className="w-4 h-4" /> Print Statement of Account
+                </button>
+              </div>
             </div>
 
             {/* Split Screen 2-Column Grid */}
@@ -1192,6 +1239,81 @@ export const CheckInOut: React.FC = () => {
                 className="px-5 py-2 zen-btn-primary text-xs font-bold shadow-xs flex items-center gap-1.5"
               >
                 <CheckCircle className="w-4 h-4" /> Finalize Check-Out & Release Room
+              </button>
+            </div>
+          </div>
+        )}
+      </Modal>
+
+      {/* 4. Extend Guest Stay Modal */}
+      <Modal
+        isOpen={!!extendModalRes}
+        onClose={() => setExtendModalRes(null)}
+        title={`Extend Guest Stay — Room ${extendModalRes?.roomNumber}`}
+        subtitle={`Guest: ${extendModalRes?.guestName} • Current Check-Out: ${extendModalRes ? formatDate(extendModalRes.checkOutDate) : ''}`}
+      >
+        {extendModalRes && (
+          <div className="space-y-4 text-xs text-[#1C1B18]">
+            <div className="p-4 bg-[#F5F2EC] rounded-xl border border-[#E5E0D8] space-y-2">
+              <div className="flex justify-between font-bold text-sm">
+                <span>Guest Name:</span>
+                <span className="text-[#C84B31] font-bold">{extendModalRes.guestName}</span>
+              </div>
+              <div className="flex justify-between text-xs text-[#6E6B65]">
+                <span>Room Assignment:</span>
+                <span className="font-bold text-[#1C1B18]">Room {extendModalRes.roomNumber} ({extendModalRes.roomType})</span>
+              </div>
+              <div className="flex justify-between text-xs text-[#6E6B65]">
+                <span>Current Check-Out Date:</span>
+                <span className="font-bold text-[#1C1B18]">{formatDate(extendModalRes.checkOutDate)} ({extendModalRes.nights} Nights)</span>
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <label className="block text-xs font-bold text-[#1C1B18]">Select Additional Nights to Extend:</label>
+              <div className="grid grid-cols-3 gap-2">
+                {[1, 2, 3].map((n) => (
+                  <button
+                    key={n}
+                    type="button"
+                    onClick={() => setExtendNights(n)}
+                    className={`py-2.5 px-3 rounded-lg border text-xs font-bold transition-all flex flex-col items-center justify-center ${
+                      extendNights === n
+                        ? 'border-[#2D5A39] bg-[#EBF5EF] text-[#2D5A39] shadow-xs'
+                        : 'border-[#E5E0D8] bg-white text-[#6E6B65] hover:border-[#2D5A39]'
+                    }`}
+                  >
+                    <span>+{n} Night{n > 1 ? 's' : ''}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="p-3.5 bg-[#EBF5EF] rounded-xl border border-[#BCE3C8] space-y-1.5 text-xs text-[#2D5A39]">
+              <div className="flex justify-between font-bold">
+                <span>Updated Stay Duration:</span>
+                <span>{(extendModalRes.nights || 1) + Number(extendNights)} Nights</span>
+              </div>
+              <div className="flex justify-between font-bold text-sm pt-1 border-t border-[#BCE3C8]">
+                <span>Additional Room Charges:</span>
+                <span className="text-[#C84B31]">+₱{(Number(extendNights) * 2500).toLocaleString()}</span>
+              </div>
+            </div>
+
+            <div className="flex justify-end gap-3 pt-3 border-t border-[#E5E0D8]">
+              <button
+                type="button"
+                onClick={() => setExtendModalRes(null)}
+                className="px-4 py-2 zen-btn text-xs font-bold"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmExtendStay}
+                className="px-5 py-2 zen-btn-primary text-xs font-bold shadow-xs flex items-center gap-1.5"
+              >
+                <CalendarPlus className="w-4 h-4" /> Confirm Stay Extension
               </button>
             </div>
           </div>
