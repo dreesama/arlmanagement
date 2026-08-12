@@ -37,85 +37,112 @@ app.post('/api/admin/reset-database', async (req, res) => {
 // -------------------------------------------------------------
 // Dashboard API
 // -------------------------------------------------------------
+function safeParseAmenities(raw: any): string[] {
+  if (Array.isArray(raw)) return raw;
+  if (!raw || typeof raw !== 'string') return [];
+  try {
+    const trimmed = raw.trim();
+    if (trimmed.startsWith('[')) {
+      return JSON.parse(trimmed);
+    }
+    return trimmed.split(',').map((s: string) => s.trim()).filter(Boolean);
+  } catch (e) {
+    return raw.split(',').map((s: string) => s.trim()).filter(Boolean);
+  }
+}
+
+// -------------------------------------------------------------
+// Dashboard API
+// -------------------------------------------------------------
 app.get('/api/dashboard/stats', async (req, res) => {
-  const db = await getDb();
-  const rooms = queryObjects(db, 'SELECT * FROM rooms');
-  const totalRooms = rooms.length;
-  const occupiedRooms = rooms.filter((r: any) => r.status === 'Occupied').length;
-  const availableRooms = rooms.filter((r: any) => r.status === 'Available').length;
-  const reservedRooms = rooms.filter((r: any) => r.status === 'Reserved').length;
-  const maintenanceRooms = rooms.filter((r: any) => r.status === 'Maintenance').length;
-  const occupancyRate = totalRooms > 0 ? Math.round((occupiedRooms / totalRooms) * 100) : 0;
+  try {
+    const db = await getDb();
+    const rooms = queryObjects(db, 'SELECT * FROM rooms');
+    const totalRooms = rooms.length;
+    const occupiedRooms = rooms.filter((r: any) => r.status === 'Occupied').length;
+    const availableRooms = rooms.filter((r: any) => r.status === 'Available').length;
+    const reservedRooms = rooms.filter((r: any) => r.status === 'Reserved').length;
+    const maintenanceRooms = rooms.filter((r: any) => r.status === 'Maintenance').length;
+    const occupancyRate = totalRooms > 0 ? Math.round((occupiedRooms / totalRooms) * 100) : 0;
 
-  const todayStr = new Date().toISOString().split('T')[0];
+    const todayStr = new Date().toISOString().split('T')[0];
 
-  const todayRevRow = queryObjects(db, `SELECT COALESCE(SUM(amount), 0) as total FROM payments WHERE paidAt LIKE ?`, [`${todayStr}%`]);
-  const todayRevenue = todayRevRow.length > 0 ? todayRevRow[0].total : 0;
+    const todayRevRow = queryObjects(db, `SELECT COALESCE(SUM(amount), 0) as total FROM payments WHERE paidAt LIKE ?`, [`${todayStr}%`]);
+    const todayRevenue = todayRevRow.length > 0 ? todayRevRow[0].total : 0;
 
-  const monthPrefix = todayStr.substring(0, 7);
-  const monthRevRow = queryObjects(db, `SELECT COALESCE(SUM(amount), 0) as total FROM payments WHERE paidAt LIKE ?`, [`${monthPrefix}%`]);
-  const monthlyRevenue = monthRevRow.length > 0 ? monthRevRow[0].total : 0;
+    const monthPrefix = todayStr.substring(0, 7);
+    const monthRevRow = queryObjects(db, `SELECT COALESCE(SUM(amount), 0) as total FROM payments WHERE paidAt LIKE ?`, [`${monthPrefix}%`]);
+    const monthlyRevenue = monthRevRow.length > 0 ? monthRevRow[0].total : 0;
 
-  const activeResRow = queryObjects(db, `SELECT COUNT(*) as count FROM reservations WHERE status IN ('Confirmed', 'Checked-In')`);
-  const arrivalsRow = queryObjects(db, `SELECT COUNT(*) as count FROM reservations WHERE checkInDate = ? AND status != 'Cancelled'`, [todayStr]);
-  const departuresRow = queryObjects(db, `SELECT COUNT(*) as count FROM reservations WHERE checkOutDate = ? AND status != 'Cancelled'`, [todayStr]);
+    const activeResRow = queryObjects(db, `SELECT COUNT(*) as count FROM reservations WHERE status IN ('Confirmed', 'Checked-In')`);
+    const arrivalsRow = queryObjects(db, `SELECT COUNT(*) as count FROM reservations WHERE checkInDate = ? AND status != 'Cancelled'`, [todayStr]);
+    const departuresRow = queryObjects(db, `SELECT COUNT(*) as count FROM reservations WHERE checkOutDate = ? AND status != 'Cancelled'`, [todayStr]);
 
-  const recentReservations = queryObjects(db, `
-    SELECT r.*, g.fullName as guestName, g.email as guestEmail, g.phone as guestPhone, rm.number as roomNumber, rm.type as roomType
-    FROM reservations r
-    JOIN guests g ON r.guestId = g.id
-    JOIN rooms rm ON r.roomId = rm.id
-    ORDER BY r.id DESC
-    LIMIT 5
-  `);
+    const recentReservations = queryObjects(db, `
+      SELECT r.*, g.fullName as guestName, g.email as guestEmail, g.phone as guestPhone, rm.number as roomNumber, rm.type as roomType
+      FROM reservations r
+      JOIN guests g ON r.guestId = g.id
+      JOIN rooms rm ON r.roomId = rm.id
+      ORDER BY r.id DESC
+      LIMIT 5
+    `);
 
-  const monthlyRevenueData = [
-    { month: 'Feb', revenue: 125000, bookings: 32 },
-    { month: 'Mar', revenue: 148000, bookings: 38 },
-    { month: 'Apr', revenue: 182000, bookings: 45 },
-    { month: 'May', revenue: 210000, bookings: 52 },
-    { month: 'Jun', revenue: 245000, bookings: 60 },
-    { month: 'Jul', revenue: 289000, bookings: 68 },
-  ];
+    const monthlyRevenueData = [
+      { month: 'Feb', revenue: 125000, bookings: 32 },
+      { month: 'Mar', revenue: 148000, bookings: 38 },
+      { month: 'Apr', revenue: 182000, bookings: 45 },
+      { month: 'May', revenue: 210000, bookings: 52 },
+      { month: 'Jun', revenue: 245000, bookings: 60 },
+      { month: 'Jul', revenue: 289000, bookings: 68 },
+    ];
 
-  const occupancyTrendData = [
-    { date: 'Jul 16', occupancyRate: 65 },
-    { date: 'Jul 17', occupancyRate: 70 },
-    { date: 'Jul 18', occupancyRate: 78 },
-    { date: 'Jul 19', occupancyRate: 85 },
-    { date: 'Jul 20', occupancyRate: 80 },
-    { date: 'Jul 21', occupancyRate: 88 },
-    { date: 'Jul 22', occupancyRate: occupancyRate },
-  ];
+    const occupancyTrendData = [
+      { date: 'Jul 16', occupancyRate: 65 },
+      { date: 'Jul 17', occupancyRate: 70 },
+      { date: 'Jul 18', occupancyRate: 78 },
+      { date: 'Jul 19', occupancyRate: 85 },
+      { date: 'Jul 20', occupancyRate: 80 },
+      { date: 'Jul 21', occupancyRate: 88 },
+      { date: 'Jul 22', occupancyRate: occupancyRate },
+    ];
 
-  res.json({
-    occupancyRate,
-    availableRooms,
-    totalRooms,
-    occupiedRooms,
-    reservedRooms,
-    maintenanceRooms,
-    todayRevenue,
-    monthlyRevenue,
-    activeReservationsCount: activeResRow[0]?.count || 0,
-    todayArrivalsCount: arrivalsRow[0]?.count || 0,
-    todayDeparturesCount: departuresRow[0]?.count || 0,
-    recentReservations,
-    monthlyRevenueData,
-    occupancyTrendData
-  });
+    res.json({
+      occupancyRate,
+      availableRooms,
+      totalRooms,
+      occupiedRooms,
+      reservedRooms,
+      maintenanceRooms,
+      todayRevenue,
+      monthlyRevenue,
+      activeReservationsCount: activeResRow[0]?.count || 0,
+      todayArrivalsCount: arrivalsRow[0]?.count || 0,
+      todayDeparturesCount: departuresRow[0]?.count || 0,
+      recentReservations,
+      monthlyRevenueData,
+      occupancyTrendData
+    });
+  } catch (err: any) {
+    console.error('Error fetching dashboard stats:', err);
+    res.status(500).json({ error: err.message || 'Failed to fetch dashboard stats' });
+  }
 });
 
 // -------------------------------------------------------------
 // Rooms API
 // -------------------------------------------------------------
 app.get('/api/rooms', async (req, res) => {
-  const db = await getDb();
-  const rooms = queryObjects(db, 'SELECT * FROM rooms ORDER BY number ASC').map((r: any) => ({
-    ...r,
-    amenities: JSON.parse(r.amenities || '[]')
-  }));
-  res.json(rooms);
+  try {
+    const db = await getDb();
+    const rooms = queryObjects(db, 'SELECT * FROM rooms ORDER BY number ASC').map((r: any) => ({
+      ...r,
+      amenities: safeParseAmenities(r.amenities)
+    }));
+    res.json(rooms);
+  } catch (err: any) {
+    console.error('Error fetching rooms:', err);
+    res.status(500).json({ error: err.message || 'Failed to fetch rooms' });
+  }
 });
 
 app.post('/api/rooms', async (req, res) => {
@@ -124,11 +151,11 @@ app.post('/api/rooms', async (req, res) => {
   try {
     db.run(
       `INSERT INTO rooms (number, floor, type, bedType, capacity, ratePerNight, status, amenities, description, image) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [number, floor, type, bedType, capacity, ratePerNight, status || 'Available', JSON.stringify(amenities || []), description, image || '']
+      [number, floor, type, bedType, capacity, ratePerNight, status || 'Available', JSON.stringify(amenities || []), description || '', image || '']
     );
     saveDb();
     const created = queryObjects(db, 'SELECT * FROM rooms WHERE number = ?', [number])[0];
-    if (created) created.amenities = JSON.parse(created.amenities || '[]');
+    if (created) created.amenities = safeParseAmenities(created.amenities);
     res.status(201).json(created);
   } catch (err: any) {
     res.status(400).json({ error: err.message });
@@ -142,11 +169,11 @@ app.put('/api/rooms/:id', async (req, res) => {
   try {
     db.run(
       `UPDATE rooms SET number = ?, floor = ?, type = ?, bedType = ?, capacity = ?, ratePerNight = ?, status = ?, amenities = ?, description = ?, image = ? WHERE id = ?`,
-      [number, floor, type, bedType, capacity, ratePerNight, status, JSON.stringify(amenities || []), description, image || '', id]
+      [number, floor, type, bedType, capacity, ratePerNight, status, JSON.stringify(amenities || []), description || '', image || '', id]
     );
     saveDb();
     const updated = queryObjects(db, 'SELECT * FROM rooms WHERE id = ?', [id])[0];
-    if (updated) updated.amenities = JSON.parse(updated.amenities || '[]');
+    if (updated) updated.amenities = safeParseAmenities(updated.amenities);
     res.json(updated);
   } catch (err: any) {
     res.status(400).json({ error: err.message });
@@ -174,12 +201,17 @@ app.delete('/api/rooms/:id', async (req, res) => {
 // Guests API
 // -------------------------------------------------------------
 app.get('/api/guests', async (req, res) => {
-  const db = await getDb();
-  const guests = queryObjects(db, 'SELECT * FROM guests ORDER BY id DESC').map((g: any) => ({
-    ...g,
-    isVip: Boolean(g.isVip)
-  }));
-  res.json(guests);
+  try {
+    const db = await getDb();
+    const guests = queryObjects(db, 'SELECT * FROM guests ORDER BY id DESC').map((g: any) => ({
+      ...g,
+      isVip: Boolean(g.isVip)
+    }));
+    res.json(guests);
+  } catch (err: any) {
+    console.error('Error fetching guests:', err);
+    res.status(500).json({ error: err.message || 'Failed to fetch guests' });
+  }
 });
 
 app.post('/api/guests', async (req, res) => {
@@ -254,15 +286,20 @@ app.delete('/api/guests/:id', async (req, res) => {
 // Reservations API
 // -------------------------------------------------------------
 app.get('/api/reservations', async (req, res) => {
-  const db = await getDb();
-  const reservations = queryObjects(db, `
-    SELECT r.*, g.fullName as guestName, g.email as guestEmail, g.phone as guestPhone, rm.number as roomNumber, rm.type as roomType
-    FROM reservations r
-    JOIN guests g ON r.guestId = g.id
-    JOIN rooms rm ON r.roomId = rm.id
-    ORDER BY r.id DESC
-  `);
-  res.json(reservations);
+  try {
+    const db = await getDb();
+    const reservations = queryObjects(db, `
+      SELECT r.*, g.fullName as guestName, g.email as guestEmail, g.phone as guestPhone, rm.number as roomNumber, rm.type as roomType
+      FROM reservations r
+      JOIN guests g ON r.guestId = g.id
+      JOIN rooms rm ON r.roomId = rm.id
+      ORDER BY r.id DESC
+    `);
+    res.json(reservations);
+  } catch (err: any) {
+    console.error('Error fetching reservations:', err);
+    res.status(500).json({ error: err.message || 'Failed to fetch reservations' });
+  }
 });
 
 app.post('/api/reservations', async (req, res) => {
