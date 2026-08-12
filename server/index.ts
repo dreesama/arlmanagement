@@ -1,6 +1,12 @@
 import express from 'express';
 import cors from 'cors';
+import path from 'path';
+import fs from 'fs';
+import { fileURLToPath } from 'url';
 import { getDb, initDatabase, saveDb, queryObjects, wipeAllMockData } from './db.js';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -697,6 +703,15 @@ app.get('/api/reports/occupancy', async (req, res) => {
 
   res.json({ totalRooms, byType, rooms });
 });
+
+const distPath = path.resolve(__dirname, '../dist');
+if (fs.existsSync(distPath)) {
+  app.use(express.static(distPath));
+  app.get('*', (req, res, next) => {
+    if (req.path.startsWith('/api')) return next();
+    res.sendFile(path.join(distPath, 'index.html'));
+  });
+}
 
 app.listen(PORT, () => {
   console.log(`ARL's Hotel API Server listening on http://localhost:${PORT}`);

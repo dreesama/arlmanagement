@@ -4,6 +4,7 @@
   "version": "1.0.0",
   "type": "module",
   "scripts": {
+    "start": "npx tsx server/index.ts",
     "dev": "npx concurrently \"npm run server\" \"npx vite\"",
     "client": "npx vite",
     "server": "npx tsx server/index.ts",
