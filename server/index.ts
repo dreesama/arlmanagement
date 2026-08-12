@@ -183,31 +183,63 @@ app.get('/api/guests', async (req, res) => {
 });
 
 app.post('/api/guests', async (req, res) => {
-  const { fullName, email, phone, idType, idNumber, address, nationality, isVip, notes } = req.body;
-  const createdAt = new Date().toISOString().split('T')[0];
-  const db = await getDb();
-  db.run(
-    `INSERT INTO guests (fullName, email, phone, idType, idNumber, address, nationality, isVip, notes, createdAt) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-    [fullName, email, phone, idType, idNumber, address, nationality, isVip ? 1 : 0, notes, createdAt]
-  );
-  saveDb();
-  const newGuest = queryObjects(db, 'SELECT * FROM guests ORDER BY id DESC LIMIT 1')[0];
-  if (newGuest) newGuest.isVip = Boolean(newGuest.isVip);
-  res.status(201).json(newGuest);
+  try {
+    const { fullName, email, phone, idType, idNumber, address, nationality, isVip, notes } = req.body;
+    const createdAt = new Date().toISOString().split('T')[0];
+    const db = await getDb();
+    db.run(
+      `INSERT INTO guests (fullName, email, phone, idType, idNumber, address, nationality, isVip, notes, createdAt) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [
+        fullName || '',
+        email || '',
+        phone || '',
+        idType || 'Passport',
+        idNumber || '',
+        address || '',
+        nationality || 'Filipino',
+        isVip ? 1 : 0,
+        notes || '',
+        createdAt
+      ]
+    );
+    saveDb();
+    const newGuest = queryObjects(db, 'SELECT * FROM guests ORDER BY id DESC LIMIT 1')[0];
+    if (newGuest) newGuest.isVip = Boolean(newGuest.isVip);
+    res.status(201).json(newGuest);
+  } catch (err: any) {
+    console.error('API Error in POST /api/guests:', err);
+    res.status(500).json({ error: err.message || 'Failed to create guest record' });
+  }
 });
 
 app.put('/api/guests/:id', async (req, res) => {
-  const { id } = req.params;
-  const { fullName, email, phone, idType, idNumber, address, nationality, isVip, notes } = req.body;
-  const db = await getDb();
-  db.run(
-    `UPDATE guests SET fullName = ?, email = ?, phone = ?, idType = ?, idNumber = ?, address = ?, nationality = ?, isVip = ?, notes = ? WHERE id = ?`,
-    [fullName, email, phone, idType, idNumber, address, nationality, isVip ? 1 : 0, notes, id]
-  );
-  saveDb();
-  const updated = queryObjects(db, 'SELECT * FROM guests WHERE id = ?', [id])[0];
-  if (updated) updated.isVip = Boolean(updated.isVip);
-  res.json(updated);
+  try {
+    const { id } = req.params;
+    const { fullName, email, phone, idType, idNumber, address, nationality, isVip, notes } = req.body;
+    const db = await getDb();
+    db.run(
+      `UPDATE guests SET fullName = ?, email = ?, phone = ?, idType = ?, idNumber = ?, address = ?, nationality = ?, isVip = ?, notes = ? WHERE id = ?`,
+      [
+        fullName || '',
+        email || '',
+        phone || '',
+        idType || 'Passport',
+        idNumber || '',
+        address || '',
+        nationality || 'Filipino',
+        isVip ? 1 : 0,
+        notes || '',
+        id
+      ]
+    );
+    saveDb();
+    const updated = queryObjects(db, 'SELECT * FROM guests WHERE id = ?', [id])[0];
+    if (updated) updated.isVip = Boolean(updated.isVip);
+    res.json(updated);
+  } catch (err: any) {
+    console.error('API Error in PUT /api/guests/:id:', err);
+    res.status(500).json({ error: err.message || 'Failed to update guest record' });
+  }
 });
 
 app.delete('/api/guests/:id', async (req, res) => {
