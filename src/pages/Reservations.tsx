@@ -123,8 +123,8 @@ export const Reservations: React.FC = () => {
     e.preventDefault();
     try {
       const selectedRoomObj = rooms.find((r) => r.id === Number(roomId));
-      if (!editingRes && selectedRoomObj && selectedRoomObj.status === 'Occupied') {
-        alert(`⚠️ Room ${selectedRoomObj.number} is currently Occupied by an active guest.\n\nPlease assign an Available room or perform check-out for Room ${selectedRoomObj.number} first.`);
+      if (!editingRes && selectedRoomObj && selectedRoomObj.status !== 'Available') {
+        alert(`⚠️ Room ${selectedRoomObj.number} is currently ${selectedRoomObj.status}.\n\nYou can only assign rooms with 'Available' status for new walk-in reservations.`);
         return;
       }
 
@@ -529,9 +529,9 @@ export const Reservations: React.FC = () => {
                 <option
                   key={r.id}
                   value={r.id}
-                  disabled={!editingRes && r.status === 'Occupied'}
+                  disabled={!editingRes && r.status !== 'Available'}
                 >
-                  Room {r.number} — {r.type} ({formatCurrency(r.ratePerNight)}/night) {r.status === 'Occupied' ? '⛔ [Occupied]' : `[${r.status}]`}
+                  Room {r.number} — {r.type} ({formatCurrency(r.ratePerNight)}/night) {r.status === 'Available' ? '✅ [Available]' : `⛔ [${r.status} - Unavailable]`}
                 </option>
               ))}
             </select>

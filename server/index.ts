@@ -314,6 +314,10 @@ app.post('/api/reservations', async (req, res) => {
       return res.status(400).json({ error: 'Selected room does not exist.' });
     }
 
+    if (rooms[0].status !== 'Available') {
+      return res.status(400).json({ error: `Room ${rooms[0].number} is currently ${rooms[0].status} and cannot accept new reservations.` });
+    }
+
     const ratePerNight = rooms[0].ratePerNight;
     const roomNumber = rooms[0].number;
     const totalAmount = ratePerNight * (nights || 1);
@@ -323,10 +327,7 @@ app.post('/api/reservations', async (req, res) => {
       [reservationCode, Number(guestId), Number(roomId), checkInDate, checkOutDate, Number(nights), Number(adults), Number(children), totalAmount, specialRequests || '', createdAt]
     );
 
-    // Only update room status if not already occupied
-    if (rooms[0].status !== 'Occupied') {
-      db.run('UPDATE rooms SET status = "Reserved" WHERE id = ?', [roomId]);
-    }
+    db.run('UPDATE rooms SET status = "Reserved" WHERE id = ?', [roomId]);
 
     const createdResRows = queryObjects(db, 'SELECT id FROM reservations WHERE reservationCode = ?', [reservationCode]);
     if (!createdResRows || createdResRows.length === 0) {
