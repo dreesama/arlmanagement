@@ -145,13 +145,15 @@ select option {
   #printable-invoice, #printable-invoice *,
   #printable-registration-card, #printable-registration-card *,
   #printable-reservation-confirmation, #printable-reservation-confirmation *,
-  #printable-checkout-receipt, #printable-checkout-receipt * {
+  #printable-checkout-receipt, #printable-checkout-receipt *,
+  #printable-active-folio, #printable-active-folio * {
     visibility: visible;
   }
   #printable-invoice,
   #printable-registration-card,
   #printable-reservation-confirmation,
-  #printable-checkout-receipt {
+  #printable-checkout-receipt,
+  #printable-active-folio {
     position: absolute;
     left: 0;
     top: 0;

@@ -13,6 +13,8 @@ import {
   DollarSign,
   User,
   ShieldCheck,
+  Trash2,
+  Edit2,
 } from 'lucide-react';
 import { Reservation, Guest, Room, PaymentMethod, BillingItem } from '../types';
 import { api } from '../lib/api';
@@ -36,6 +38,12 @@ export const CheckInOut: React.FC = () => {
   const [incidentalBilling, setIncidentalBilling] = useState<any | null>(null);
   const [chargeDesc, setChargeDesc] = useState('Room Service / Food & Beverage');
   const [chargePrice, setChargePrice] = useState<number>(350);
+
+  // Line Item Inline Editor State
+  const [editingItemIdx, setEditingItemIdx] = useState<number | null>(null);
+  const [editItemDesc, setEditItemDesc] = useState('');
+  const [editItemPrice, setEditItemPrice] = useState<number>(0);
+  const [editItemQty, setEditItemQty] = useState<number>(1);
 
   // Pre-Check-Out & Settlement Modal State
   const [checkoutModalRes, setCheckoutModalRes] = useState<Reservation | null>(null);
@@ -141,6 +149,77 @@ export const CheckInOut: React.FC = () => {
       loadData();
     } catch (err: any) {
       alert(`Error posting charge: ${err.message}`);
+    }
+  };
+
+  const handleDeleteChargeItem = async (itemIdx: number) => {
+    if (!incidentalBilling || !incidentalBilling.items) return;
+    if (!confirm('Are you sure you want to remove this charge item?')) return;
+    try {
+      const updatedItems = incidentalBilling.items.filter((_: any, idx: number) => idx !== itemIdx);
+      await api.updateBilling(incidentalBilling.id, {
+        discountType: incidentalBilling.discountType || 'percentage',
+        discountValue: incidentalBilling.discountValue || 0,
+        items: updatedItems,
+      });
+      const fresh = await api.getBillingById(incidentalBilling.id);
+      setIncidentalBilling(fresh);
+      loadData();
+    } catch (err: any) {
+      alert(`Error removing charge: ${err.message}`);
+    }
+  };
+
+  const handleStartEditItem = (idx: number, item: any) => {
+    setEditingItemIdx(idx);
+    setEditItemDesc(item.description);
+    setEditItemPrice(item.unitPrice || item.amount);
+    setEditItemQty(item.quantity || 1);
+  };
+
+  const handleSaveEditItem = async (itemIdx: number) => {
+    if (!incidentalBilling || !incidentalBilling.items) return;
+    try {
+      const updatedItems = [...incidentalBilling.items];
+      updatedItems[itemIdx] = {
+        description: editItemDesc,
+        quantity: Number(editItemQty),
+        unitPrice: Number(editItemPrice),
+        amount: Number(editItemPrice) * Number(editItemQty),
+      };
+
+      await api.updateBilling(incidentalBilling.id, {
+        discountType: incidentalBilling.discountType || 'percentage',
+        discountValue: incidentalBilling.discountValue || 0,
+        items: updatedItems,
+      });
+
+      setEditingItemIdx(null);
+      const fresh = await api.getBillingById(incidentalBilling.id);
+      setIncidentalBilling(fresh);
+      loadData();
+    } catch (err: any) {
+      alert(`Error updating charge item: ${err.message}`);
+    }
+  };
+
+  const handleRecordActiveFolioPayment = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!incidentalBilling) return;
+    try {
+      await api.recordPayment(incidentalBilling.id, {
+        amount: Number(settleAmount),
+        method: settleMethod,
+        referenceNo: settleRef,
+        notes: settleNotes || 'Mid-stay folio payment',
+      });
+      alert('Payment recorded successfully!');
+      const fresh = await api.getBillingById(incidentalBilling.id);
+      setIncidentalBilling(fresh);
+      setSettleAmount(fresh.balanceAmount);
+      loadData();
+    } catch (err: any) {
+      alert(`Error recording payment: ${err.message}`);
     }
   };
 
@@ -370,9 +449,9 @@ export const CheckInOut: React.FC = () => {
                         <button
                           onClick={() => handleOpenIncidentalModal(res)}
                           className="px-2.5 py-1.5 zen-btn text-xs font-bold text-[#C84B31] flex items-center gap-1"
-                          title="Add extra room service / incidental charges"
+                          title="Manage active stay charges, edit items, record payments & print interim folio"
                         >
-                          <Plus className="w-3 h-3" /> Add Charge
+                          <FileText className="w-3 h-3 text-[#C84B31]" /> Active Folio & Charges
                         </button>
                         <button
                           onClick={() => handleOpenCheckoutModal(res)}
@@ -528,102 +607,318 @@ export const CheckInOut: React.FC = () => {
         )}
       </Modal>
 
-      {/* 2. Add Incidentals / Extra Charges Modal */}
+      {/* 2. Active Guest Folio, Incidentals & Payment Station Modal */}
       <Modal
         isOpen={!!incidentalModalRes}
         onClose={() => setIncidentalModalRes(null)}
-        title={`Add Extra Charges — Room ${incidentalModalRes?.roomNumber}`}
-        subtitle={`Guest: ${incidentalModalRes?.guestName} • Invoice Folio: ${incidentalBilling?.invoiceNumber}`}
+        title={`Active Guest Folio & Ledger — Room ${incidentalModalRes?.roomNumber}`}
+        subtitle={`Guest: ${incidentalModalRes?.guestName} • Folio Invoice: ${incidentalBilling?.invoiceNumber}`}
+        maxWidth="2xl"
       >
-        <form onSubmit={handleAddIncidentalCharge} className="space-y-4 text-xs">
-          <div className="p-3.5 bg-[#F5F2EC] rounded-xl border border-[#E5E0D8] space-y-1">
-            <div className="flex justify-between font-bold text-[#1C1B18]">
-              <span>Current Grand Total:</span>
-              <span className="text-[#C84B31]">{formatCurrency(incidentalBilling?.grandTotal || 0)}</span>
+        {incidentalModalRes && (
+          <div className="space-y-5 text-xs text-[#1C1B18]">
+            {/* Top Toolbar for Printing Interim Folio */}
+            <div className="flex justify-between items-center bg-[#F5F2EC] p-3 rounded-xl border border-[#E5E0D8] no-print">
+              <span className="font-bold text-[#6E6B65] flex items-center gap-1.5">
+                <Printer className="w-4 h-4 text-[#C84B31]" /> Active Stay Ledger Station. Print updated interim folio anytime.
+              </span>
+              <button
+                onClick={printInvoice}
+                className="px-4 py-2 bg-[#1C1B18] text-white hover:bg-black rounded-lg text-xs font-bold flex items-center gap-2 shadow-xs"
+              >
+                <Printer className="w-4 h-4" /> Print Interim Folio Receipt
+              </button>
             </div>
-            <div className="flex justify-between text-[11px] text-[#6E6B65]">
-              <span>Extra Charges Subtotal: {formatCurrency(incidentalBilling?.extraCharges || 0)}</span>
-              <span>Balance Due: {formatCurrency(incidentalBilling?.balanceAmount || 0)}</span>
-            </div>
-          </div>
 
-          <div>
-            <label className="block font-bold text-[#1C1B18] mb-1">Item Description / Particular *</label>
-            <input
-              type="text"
-              required
-              value={chargeDesc}
-              onChange={(e) => setChargeDesc(e.target.value)}
-              className="w-full px-3 py-2 zen-input text-xs text-[#1C1B18]"
-              placeholder="e.g. Minibar, Room Service Food, Laundry"
-            />
-            {/* Presets */}
-            <div className="flex flex-wrap gap-1.5 mt-2">
-              {[
-                { label: 'Food & Beverage', price: 450 },
-                { label: 'Minibar Beverages', price: 250 },
-                { label: 'Laundry Service', price: 300 },
-                { label: 'Extra Rollaway Bed', price: 800 },
-                { label: 'Spa Treatment', price: 1200 },
-              ].map((preset, idx) => (
-                <button
-                  key={idx}
-                  type="button"
-                  onClick={() => {
-                    setChargeDesc(preset.label);
-                    setChargePrice(preset.price);
-                  }}
-                  className="px-2.5 py-1 bg-white border border-[#E5E0D8] hover:bg-[#F5F2EC] text-[10px] font-bold rounded-md transition-all text-[#C84B31]"
-                >
-                  + {preset.label} ({formatCurrency(preset.price)})
-                </button>
-              ))}
-            </div>
-          </div>
-
-          <div>
-            <label className="block font-bold text-[#1C1B18] mb-1">Charge Amount (₱) *</label>
-            <input
-              type="number"
-              required
-              min={1}
-              value={chargePrice}
-              onChange={(e) => setChargePrice(Number(e.target.value))}
-              className="w-full px-3 py-2 zen-input text-xs font-bold text-[#1C1B18]"
-            />
-          </div>
-
-          {/* Current Line Items Ledger */}
-          {incidentalBilling?.items && (
-            <div className="space-y-1.5 pt-2">
-              <span className="font-bold text-[#6E6B65] text-[10px] uppercase">POSTED ITEMIZED CHARGES ({incidentalBilling.items.length}):</span>
-              <div className="space-y-1 max-h-32 overflow-y-auto pr-1">
-                {incidentalBilling.items.map((item: any, idx: number) => (
-                  <div key={idx} className="flex justify-between p-2 bg-[#F5F2EC] rounded-lg border border-[#E5E0D8] text-[11px] font-medium">
-                    <span>{item.description} (x{item.quantity})</span>
-                    <span className="font-bold text-[#1C1B18]">{formatCurrency(item.amount)}</span>
-                  </div>
-                ))}
+            {/* Financial Status Summary Box */}
+            <div className="p-3.5 bg-white rounded-xl border border-[#E5E0D8] space-y-1">
+              <div className="flex justify-between font-bold text-sm text-[#1C1B18]">
+                <span>Total Billed Folio Volume:</span>
+                <span className="text-[#C84B31]">{formatCurrency(incidentalBilling?.grandTotal || 0)}</span>
+              </div>
+              <div className="flex justify-between text-xs text-[#2D5A39] font-bold">
+                <span>Total Payments Received:</span>
+                <span>{formatCurrency(incidentalBilling?.paidAmount || 0)}</span>
+              </div>
+              <div className="flex justify-between text-xs text-[#9A6208] font-extrabold pt-1 border-t border-[#E5E0D8]">
+                <span>Current Balance Due:</span>
+                <span>{formatCurrency(incidentalBilling?.balanceAmount || 0)}</span>
               </div>
             </div>
-          )}
 
-          <div className="flex justify-end gap-3 pt-4 border-t border-[#E5E0D8]">
-            <button
-              type="button"
-              onClick={() => setIncidentalModalRes(null)}
-              className="px-4 py-2 zen-btn text-xs font-bold"
-            >
-              Close
-            </button>
-            <button
-              type="submit"
-              className="px-4 py-2 zen-btn-primary text-xs font-bold shadow-xs flex items-center gap-1.5"
-            >
-              <Plus className="w-4 h-4" /> Post Incidentals Charge
-            </button>
+            {/* Post New Incidental Charge Section */}
+            <form onSubmit={handleAddIncidentalCharge} className="p-4 bg-[#F5F2EC] rounded-xl border border-[#E5E0D8] space-y-3 no-print">
+              <h4 className="font-bold text-[#1C1B18] text-xs flex items-center gap-1.5">
+                <Plus className="w-4 h-4 text-[#C84B31]" /> Post New Extra / Incidental Charge
+              </h4>
+
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <div className="sm:col-span-2">
+                  <label className="block font-bold text-[#1C1B18] mb-1">Item Description / Particular *</label>
+                  <input
+                    type="text"
+                    required
+                    value={chargeDesc}
+                    onChange={(e) => setChargeDesc(e.target.value)}
+                    className="w-full px-3 py-1.5 zen-input text-xs text-[#1C1B18]"
+                    placeholder="e.g. Room Service, Minibar, Laundry"
+                  />
+                </div>
+                <div>
+                  <label className="block font-bold text-[#1C1B18] mb-1">Amount (₱) *</label>
+                  <input
+                    type="number"
+                    required
+                    min={1}
+                    value={chargePrice}
+                    onChange={(e) => setChargePrice(Number(e.target.value))}
+                    className="w-full px-3 py-1.5 zen-input text-xs font-bold text-[#1C1B18]"
+                  />
+                </div>
+              </div>
+
+              {/* Preset Buttons */}
+              <div className="flex flex-wrap items-center gap-1.5 pt-1">
+                <span className="text-[10px] text-[#6E6B65] font-bold">Quick Presets:</span>
+                {[
+                  { label: 'Food & Beverage', price: 450 },
+                  { label: 'Minibar Beverages', price: 250 },
+                  { label: 'Laundry Service', price: 300 },
+                  { label: 'Extra Rollaway Bed', price: 800 },
+                  { label: 'Spa Treatment', price: 1200 },
+                ].map((preset, idx) => (
+                  <button
+                    key={idx}
+                    type="button"
+                    onClick={() => {
+                      setChargeDesc(preset.label);
+                      setChargePrice(preset.price);
+                    }}
+                    className="px-2 py-0.5 bg-white border border-[#E5E0D8] hover:bg-[#C84B31] hover:text-white text-[10px] font-bold rounded transition-all text-[#C84B31]"
+                  >
+                    + {preset.label} (₱{preset.price})
+                  </button>
+                ))}
+              </div>
+
+              <div className="flex justify-end pt-2">
+                <button
+                  type="submit"
+                  className="px-4 py-1.5 zen-btn-primary text-xs font-bold shadow-xs flex items-center gap-1"
+                >
+                  <Plus className="w-3.5 h-3.5" /> Post Charge to Folio
+                </button>
+              </div>
+            </form>
+
+            {/* Current Line Items Ledger with Deletion Ability */}
+            {incidentalBilling?.items && (
+              <div className="space-y-2">
+                <h4 className="font-bold text-[#6E6B65] text-[10px] uppercase border-b border-[#E5E0D8] pb-1">
+                  CURRENT ITEMIZED FOLIO CHARGES ({incidentalBilling.items.length}):
+                </h4>
+                <div className="space-y-1.5 max-h-40 overflow-y-auto pr-1">
+                  {incidentalBilling.items.map((item: any, idx: number) => (
+                    <div key={idx} className="p-2.5 bg-white rounded-lg border border-[#E5E0D8] text-xs">
+                      {editingItemIdx === idx ? (
+                        <div className="flex flex-col sm:flex-row items-center gap-2">
+                          <input
+                            type="text"
+                            value={editItemDesc}
+                            onChange={(e) => setEditItemDesc(e.target.value)}
+                            className="flex-1 px-2 py-1 zen-input text-xs font-semibold text-[#1C1B18]"
+                            placeholder="Charge name"
+                          />
+                          <div className="flex items-center gap-2">
+                            <input
+                              type="number"
+                              min={1}
+                              value={editItemPrice}
+                              onChange={(e) => setEditItemPrice(Number(e.target.value))}
+                              className="w-24 px-2 py-1 zen-input text-xs font-bold text-[#1C1B18]"
+                              placeholder="Price"
+                            />
+                            <button
+                              type="button"
+                              onClick={() => handleSaveEditItem(idx)}
+                              className="px-2.5 py-1 bg-[#2D5A39] text-white hover:bg-[#1E3E27] rounded text-xs font-bold transition-all shadow-xs"
+                            >
+                              Save
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => setEditingItemIdx(null)}
+                              className="px-2 py-1 zen-btn text-xs font-semibold"
+                            >
+                              Cancel
+                            </button>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="flex justify-between items-center">
+                          <div>
+                            <span className="font-bold text-[#1C1B18]">{item.description}</span>
+                            <span className="text-[#6E6B65] ml-2 text-[11px] font-medium">(Qty: {item.quantity} × {formatCurrency(item.unitPrice)})</span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <span className="font-bold text-[#C84B31]">{formatCurrency(item.amount)}</span>
+                            <button
+                              onClick={() => handleStartEditItem(idx, item)}
+                              className="p-1 rounded text-[#6E6B65] hover:text-[#C84B31] hover:bg-[#F5F2EC] transition-colors border border-[#E5E0D8]"
+                              title="Edit charge name or price"
+                            >
+                              <Edit2 className="w-3.5 h-3.5" />
+                            </button>
+                            <button
+                              onClick={() => handleDeleteChargeItem(idx)}
+                              className="p-1 rounded text-[#6E6B65] hover:text-rose-600 hover:bg-rose-50 transition-colors border border-[#E5E0D8]"
+                              title="Remove this charge item"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Mid-Stay Payment Section */}
+            <form onSubmit={handleRecordActiveFolioPayment} className="p-4 bg-[#EBF5EF] rounded-xl border border-[#BCE3C8] space-y-3 no-print">
+              <h4 className="font-bold text-[#2D5A39] text-xs flex items-center gap-1.5">
+                <CreditCard className="w-4 h-4" /> Record Mid-Stay Payment / Settlement Anytime
+              </h4>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block font-bold text-[#1C1B18] mb-1">Payment Amount (₱) *</label>
+                  <input
+                    type="number"
+                    required
+                    min={1}
+                    max={incidentalBilling?.balanceAmount || 999999}
+                    value={settleAmount}
+                    onChange={(e) => setSettleAmount(Number(e.target.value))}
+                    className="w-full px-3 py-1.5 zen-input text-xs font-bold text-[#1C1B18]"
+                  />
+                </div>
+                <div>
+                  <label className="block font-bold text-[#1C1B18] mb-1">Payment Method *</label>
+                  <select
+                    value={settleMethod}
+                    onChange={(e) => setSettleMethod(e.target.value as PaymentMethod)}
+                    className="w-full px-3 py-1.5 zen-input text-xs text-[#1C1B18]"
+                  >
+                    <option value="Cash">Cash</option>
+                    <option value="GCash">GCash</option>
+                    <option value="Credit Card">Credit Card</option>
+                    <option value="Bank Transfer">Bank Transfer</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="flex gap-2 items-center">
+                <input
+                  type="text"
+                  value={settleRef}
+                  onChange={(e) => setSettleRef(e.target.value)}
+                  placeholder="Reference / Transaction #"
+                  className="flex-1 px-3 py-1.5 zen-input text-xs text-[#1C1B18]"
+                />
+                <button
+                  type="submit"
+                  className="px-4 py-1.5 bg-[#2D5A39] text-white hover:bg-[#1E3E27] rounded-lg text-xs font-bold shrink-0 flex items-center gap-1 shadow-xs"
+                >
+                  <CheckCircle className="w-3.5 h-3.5" /> Post Payment
+                </button>
+              </div>
+            </form>
+
+            {/* Printable Active Folio Sheet */}
+            <div id="printable-active-folio" className="p-6 bg-white rounded-xl border border-[#E5E0D8] space-y-6">
+              <div className="flex justify-between items-start border-b border-[#E5E0D8] pb-4">
+                <div className="flex items-center gap-3">
+                  <Logo size={36} />
+                  <div>
+                    <h1 className="text-lg font-bold text-[#1C1B18] leading-none">ARL's Hotel</h1>
+                    <span className="text-[10px] text-[#6E6B65] font-semibold uppercase tracking-wider">Interim Guest Folio & Account Statement</span>
+                  </div>
+                </div>
+                <div className="text-right">
+                  <div className="font-mono text-sm font-bold text-[#C84B31]">{incidentalBilling?.invoiceNumber}</div>
+                  <div className="text-[11px] text-[#6E6B65]">Date: {formatDate(todayStr)}</div>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4 bg-[#F5F2EC] p-3.5 rounded-xl border border-[#E5E0D8]">
+                <div>
+                  <span className="text-[10px] font-bold text-[#6E6B65] uppercase block">GUEST NAME</span>
+                  <div className="font-bold text-sm text-[#1C1B18]">{incidentalModalRes.guestName}</div>
+                  <div className="text-[11px] text-[#6E6B65]">Room {incidentalModalRes.roomNumber} ({incidentalModalRes.roomType})</div>
+                </div>
+                <div className="text-right">
+                  <span className="text-[10px] font-bold text-[#6E6B65] uppercase block">STAY SCHEDULE</span>
+                  <div className="font-bold text-xs text-[#1C1B18]">{formatDate(incidentalModalRes.checkInDate)} → {formatDate(incidentalModalRes.checkOutDate)}</div>
+                  <div className="text-[11px] text-[#6E6B65]">{incidentalModalRes.nights} Night(s)</div>
+                </div>
+              </div>
+
+              {incidentalBilling && (
+                <div className="p-4 bg-white rounded-xl border border-[#E5E0D8] space-y-2">
+                  <div className="flex justify-between font-bold text-xs text-[#1C1B18] border-b border-[#E5E0D8] pb-1">
+                    <span>ITEMIZED PARTICULAR</span>
+                    <span>AMOUNT (₱)</span>
+                  </div>
+                  {incidentalBilling.items && incidentalBilling.items.map((item: any, idx: number) => (
+                    <div key={idx} className="flex justify-between text-xs py-1 border-b border-[#E5E0D8]/60">
+                      <span>{item.description} (x{item.quantity})</span>
+                      <span className="font-bold text-[#1C1B18]">{formatCurrency(item.amount)}</span>
+                    </div>
+                  ))}
+                  <div className="flex justify-between text-xs text-[#6E6B65] pt-2 border-t border-[#E5E0D8]">
+                    <span>Total Billed Volume:</span>
+                    <span className="font-bold text-[#1C1B18]">{formatCurrency(incidentalBilling.grandTotal)}</span>
+                  </div>
+                  <div className="flex justify-between text-xs text-[#2D5A39] font-bold">
+                    <span>Total Payments Received:</span>
+                    <span>{formatCurrency(incidentalBilling.paidAmount)}</span>
+                  </div>
+                  <div className="flex justify-between text-sm font-extrabold text-[#1C1B18] pt-2 border-t border-[#E5E0D8]">
+                    <span>Current Balance Due:</span>
+                    <span className="text-[#C84B31]">{formatCurrency(incidentalBilling.balanceAmount)}</span>
+                  </div>
+                </div>
+              )}
+
+              <div className="pt-8 grid grid-cols-2 gap-8 text-center text-xs">
+                <div className="space-y-6">
+                  <div className="border-b border-[#1C1B18] pb-1 font-bold text-[#1C1B18]">
+                    {incidentalModalRes.guestName}
+                  </div>
+                  <div className="text-[10px] text-[#6E6B65]">Guest Signature</div>
+                </div>
+                <div className="space-y-6">
+                  <div className="border-b border-[#1C1B18] pb-1 font-bold text-[#1C1B18]">
+                    Front Desk Receptionist
+                  </div>
+                  <div className="text-[10px] text-[#6E6B65]">Cashier / Front Desk Signature</div>
+                </div>
+              </div>
+            </div>
+
+            <div className="flex justify-end gap-3 pt-4 border-t border-[#E5E0D8] no-print">
+              <button
+                type="button"
+                onClick={() => setIncidentalModalRes(null)}
+                className="px-5 py-2 zen-btn-primary text-xs font-bold shadow-xs"
+              >
+                Done / Close Station
+              </button>
+            </div>
           </div>
-        </form>
+        )}
       </Modal>
 
       {/* 3. Pre-Check-Out Folio Settlement & Paid Receipt Modal */}

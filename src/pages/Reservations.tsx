@@ -612,7 +612,7 @@ export const Reservations: React.FC = () => {
                   <Logo size={36} />
                   <div>
                     <h1 className="text-lg font-bold text-[#1C1B18] leading-none">ARL's Hotel</h1>
-                    <span className="text-[10px] text-[#6E6B65] font-semibold uppercase tracking-wider">Official Reservation Confirmation Slip</span>
+                    <span className="text-[10px] text-[#6E6B65] font-semibold uppercase tracking-wider">HOTEL GUEST REGISTRATION & OCCUPANCY AGREEMENT</span>
                   </div>
                 </div>
                 <div className="text-right">
