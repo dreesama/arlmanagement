@@ -53,6 +53,9 @@ export const CheckInOut: React.FC = () => {
   const [settleRef, setSettleRef] = useState('');
   const [settleNotes, setSettleNotes] = useState('Checkout settlement');
 
+  // Printable Paper Size Selection State ('short' | 'half' | 'thermal')
+  const [paperSize, setPaperSize] = useState<'short' | 'half' | 'thermal'>('short');
+
   useEffect(() => {
     loadData();
   }, []);
@@ -480,20 +483,40 @@ export const CheckInOut: React.FC = () => {
         {checkinModalRes && (
           <div className="space-y-5 text-xs text-[#1C1B18]">
             {/* Top Action Bar */}
-            <div className="flex justify-between items-center bg-[#F5F2EC] p-3 rounded-xl border border-[#E5E0D8] no-print">
-              <span className="font-bold text-[#6E6B65] flex items-center gap-1.5">
-                <Printer className="w-4 h-4 text-[#C84B31]" /> Print Registration Card & acquire Guest Signature before check-in.
-              </span>
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 bg-[#F5F2EC] p-3 rounded-xl border border-[#E5E0D8] no-print">
+              <div className="flex items-center gap-3">
+                <span className="font-bold text-[#6E6B65] flex items-center gap-1.5 shrink-0">
+                  <Printer className="w-4 h-4 text-[#C84B31]" /> Paper Size:
+                </span>
+                <select
+                  value={paperSize}
+                  onChange={(e) => setPaperSize(e.target.value as any)}
+                  className="zen-input text-xs font-bold rounded-lg px-2.5 py-1 text-[#1C1B18]"
+                >
+                  <option value="short">📄 Short Bond Paper (8.5" × 11")</option>
+                  <option value="half">📜 Half-Letter Paper (8.5" × 5.5")</option>
+                  <option value="thermal">🧾 Thermal POS Receipt (80mm)</option>
+                </select>
+              </div>
               <button
                 onClick={printInvoice}
-                className="px-4 py-2 bg-[#1C1B18] text-white hover:bg-black rounded-lg text-xs font-bold flex items-center gap-2 shadow-xs"
+                className="px-4 py-2 bg-[#1C1B18] text-white hover:bg-black rounded-lg text-xs font-bold flex items-center gap-2 shadow-xs shrink-0"
               >
                 <Printer className="w-4 h-4" /> Print Registration Card
               </button>
             </div>
 
             {/* Printable Hotel Registration Card Container */}
-            <div id="printable-registration-card" className="p-6 bg-white rounded-xl border border-[#E5E0D8] space-y-6">
+            <div
+              id="printable-registration-card"
+              className={`bg-white rounded-xl border border-[#E5E0D8] space-y-6 ${
+                paperSize === 'thermal'
+                  ? 'max-w-[80mm] mx-auto p-3 text-[10px]'
+                  : paperSize === 'half'
+                  ? 'max-w-[5.5in] mx-auto p-4'
+                  : 'max-w-[8.5in] mx-auto p-6'
+              }`}
+            >
               {/* Hotel Header */}
               <div className="flex justify-between items-start border-b border-[#E5E0D8] pb-4">
                 <div className="flex items-center gap-3">
@@ -618,13 +641,24 @@ export const CheckInOut: React.FC = () => {
         {incidentalModalRes && (
           <div className="space-y-5 text-xs text-[#1C1B18]">
             {/* Top Toolbar for Printing Interim Folio */}
-            <div className="flex justify-between items-center bg-[#F5F2EC] p-3 rounded-xl border border-[#E5E0D8] no-print">
-              <span className="font-bold text-[#6E6B65] flex items-center gap-1.5">
-                <Printer className="w-4 h-4 text-[#C84B31]" /> Active Stay Ledger Station. Print updated interim folio anytime.
-              </span>
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 bg-[#F5F2EC] p-3 rounded-xl border border-[#E5E0D8] no-print">
+              <div className="flex items-center gap-3">
+                <span className="font-bold text-[#6E6B65] flex items-center gap-1.5 shrink-0">
+                  <Printer className="w-4 h-4 text-[#C84B31]" /> Paper Size:
+                </span>
+                <select
+                  value={paperSize}
+                  onChange={(e) => setPaperSize(e.target.value as any)}
+                  className="zen-input text-xs font-bold rounded-lg px-2.5 py-1 text-[#1C1B18]"
+                >
+                  <option value="short">📄 Short Bond Paper (8.5" × 11")</option>
+                  <option value="half">📜 Half-Letter Paper (8.5" × 5.5")</option>
+                  <option value="thermal">🧾 Thermal POS Receipt (80mm)</option>
+                </select>
+              </div>
               <button
                 onClick={printInvoice}
-                className="px-4 py-2 bg-[#1C1B18] text-white hover:bg-black rounded-lg text-xs font-bold flex items-center gap-2 shadow-xs"
+                className="px-4 py-2 bg-[#1C1B18] text-white hover:bg-black rounded-lg text-xs font-bold flex items-center gap-2 shadow-xs shrink-0"
               >
                 <Printer className="w-4 h-4" /> Print Interim Folio Receipt
               </button>
@@ -932,13 +966,24 @@ export const CheckInOut: React.FC = () => {
         {checkoutModalRes && (
           <div className="space-y-5 text-xs text-[#1C1B18]">
             {/* Top Action Toolbar */}
-            <div className="flex justify-between items-center bg-[#F5F2EC] p-3 rounded-xl border border-[#E5E0D8] no-print">
-              <span className="font-bold text-[#6E6B65] flex items-center gap-1.5">
-                <FileText className="w-4 h-4 text-[#C84B31]" /> Review Guest SOA, settle balance, and print checkout receipt.
-              </span>
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 bg-[#F5F2EC] p-3 rounded-xl border border-[#E5E0D8] no-print">
+              <div className="flex items-center gap-3">
+                <span className="font-bold text-[#6E6B65] flex items-center gap-1.5 shrink-0">
+                  <Printer className="w-4 h-4 text-[#C84B31]" /> Paper Size:
+                </span>
+                <select
+                  value={paperSize}
+                  onChange={(e) => setPaperSize(e.target.value as any)}
+                  className="zen-input text-xs font-bold rounded-lg px-2.5 py-1 text-[#1C1B18]"
+                >
+                  <option value="short">📄 Short Bond Paper (8.5" × 11")</option>
+                  <option value="half">📜 Half-Letter Paper (8.5" × 5.5")</option>
+                  <option value="thermal">🧾 Thermal POS Receipt (80mm)</option>
+                </select>
+              </div>
               <button
                 onClick={printInvoice}
-                className="px-4 py-2 bg-[#1C1B18] text-white hover:bg-black rounded-lg text-xs font-bold flex items-center gap-2 shadow-xs"
+                className="px-4 py-2 bg-[#1C1B18] text-white hover:bg-black rounded-lg text-xs font-bold flex items-center gap-2 shadow-xs shrink-0"
               >
                 <Printer className="w-4 h-4" /> Print Checkout Receipt Report
               </button>
