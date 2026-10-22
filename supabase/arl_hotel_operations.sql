@@ -70,7 +70,7 @@ declare descr text; qty numeric; unit numeric; amt numeric;
 begin
  if not private.is_arl_admin() then raise exception 'Not authorized'; end if;
  if p_discount_type not in ('percentage','fixed') or p_discount_value < 0 or p_discount_value is null then raise exception 'Invalid discount'; end if;
- if p_discount_type='percentage' and p_discount_value>100 then raise exception 'Discount over 100%'; end if;
+ if p_discount_type='percentage' and p_discount_value>100 then raise exception 'Discount exceeds allowed percentage'; end if;
  if jsonb_typeof(p_items) <> 'array' or jsonb_array_length(p_items)>100 then raise exception 'Invalid line items'; end if;
  select * into bill from public.billings where id=p_id for update;
  if not found then raise exception 'Billing not found'; end if;
