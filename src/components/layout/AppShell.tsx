@@ -1,5 +1,4 @@
-import React, { useEffect, useState } from 'react';
-import { api } from '../../lib/api';
+import React, { useState } from 'react';
 import { Sidebar } from './Sidebar';
 import { Header } from './Header';
 import { RightInspector } from './RightInspector';
@@ -11,41 +10,25 @@ import { Guests } from '../../pages/Guests';
 import { BillingPage } from '../../pages/Billing';
 import { Reports } from '../../pages/Reports';
 import { User } from '../../types';
-import { LoginModal } from '../auth/LoginModal';
 import { CustomCursor } from '../ui/CustomCursor';
 
 export const AppShell: React.FC = () => {
   const [activeTab, setActiveTab] = useState<string>('dashboard');
   const [sidebarCollapsed, setSidebarCollapsed] = useState<boolean>(false);
-  const [currentUser, setCurrentUser] = useState<User | null>(null);
-  const [checkingSession, setCheckingSession] = useState(true);
-  useEffect(() => {
-    let active = true;
-    api.restoreSession().then(user => {
-      if (active) setCurrentUser(user);
-    }).finally(() => { if (active) setCheckingSession(false); });
-    return () => { active = false; };
-  }, []);
-
-  const handleLogout = () => {
-    void api.logout();
-    setCurrentUser(null);
-  };
-
-  const handleLoginSuccess = (user: User) => {
-    setCurrentUser(user);
-  };
+  const currentUser: User = { id: 0, username: 'demo', fullName: 'Demo Tester', role: 'Admin' };
 
   return (
     <div className="h-screen bg-[#F5F2EC] text-[#1C1B18] flex flex-col font-sans overflow-hidden select-none">
       {/* Japandi Custom 3D Interactive Mouse Cursor */}
       <CustomCursor />
 
-      {/* Simple Auth Gate Modal */}
-      {!checkingSession && !currentUser && <LoginModal onLoginSuccess={handleLoginSuccess} />}
+      {/* Public demonstration: no account or sign-in required */}
+      <div className="px-3 py-1.5 text-center bg-[#EBF5EF] text-[#2D5A39] text-[11px] font-semibold border-b border-[#BCE3C8]">
+        SIMULATION MODE — demo data only · Changes are shared with other testers
+      </div>
 
       {/* Japandi 3-Panel Layout Container */}
-      {!checkingSession && currentUser && (
+      {(
         <div className="flex flex-1 h-full overflow-hidden relative">
           {/* PANEL 1: LEFT SIDEBAR (Primary Navigation) */}
           <Sidebar
@@ -54,7 +37,6 @@ export const AppShell: React.FC = () => {
             collapsed={sidebarCollapsed}
             setCollapsed={setSidebarCollapsed}
             currentUser={currentUser}
-            onLogout={handleLogout}
           />
 
           {/* PANEL 2: CENTER MAIN CONTENT AREA */}
