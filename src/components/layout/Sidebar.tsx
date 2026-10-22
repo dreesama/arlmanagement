@@ -9,7 +9,6 @@ import {
   BarChart3,
   ChevronLeft,
   ChevronRight,
-  LogOut,
 } from 'lucide-react';
 import { User } from '../../types';
 import { Logo } from '../ui/Logo';
@@ -20,7 +19,6 @@ interface SidebarProps {
   collapsed: boolean;
   setCollapsed: (collapsed: boolean) => void;
   currentUser: User | null;
-  onLogout: () => void;
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({
@@ -29,7 +27,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
   collapsed,
   setCollapsed,
   currentUser,
-  onLogout,
 }) => {
   const navItems = [
     { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
@@ -96,36 +93,10 @@ export const Sidebar: React.FC<SidebarProps> = ({
         })}
       </div>
 
-      {/* User Footer */}
+      {/* Shared demonstration identity — no authentication */}
       <div className="p-3 border-t border-[#E5E0D8] bg-[#F5F2EC]/50">
-        {!collapsed ? (
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2.5 min-w-0">
-              <div className="w-8 h-8 rounded-full bg-white border border-[#E5E0D8] flex items-center justify-center text-xs font-bold text-[#C84B31] shrink-0">
-                {currentUser?.fullName?.charAt(0) || 'A'}
-              </div>
-              <div className="min-w-0">
-                <div className="text-xs font-bold text-[#1C1B18] truncate">{currentUser?.fullName || 'Administrator'}</div>
-                <div className="text-[10px] text-[#6E6B65] truncate">{currentUser?.role || 'Admin'}</div>
-              </div>
-            </div>
-            <button
-              onClick={onLogout}
-              className="p-1.5 rounded text-[#6E6B65] hover:text-[#C84B31] hover:bg-rose-50 transition-colors"
-              title="Sign Out"
-            >
-              <LogOut className="w-4 h-4" />
-            </button>
-          </div>
-        ) : (
-          <button
-            onClick={onLogout}
-            className="w-full py-2 flex justify-center text-[#6E6B65] hover:text-[#C84B31] hover:bg-rose-50 rounded transition-colors"
-            title="Sign Out"
-          >
-            <LogOut className="w-4 h-4" />
-          </button>
-        )}
+        <div className="text-xs font-bold text-[#1C1B18]">{collapsed ? 'Demo' : (currentUser?.fullName || 'Demo Tester')}</div>
+        {!collapsed && <div className="text-[10px] text-[#6E6B65]">Public simulation · No sign-in</div>}
       </div>
     </aside>
   );
