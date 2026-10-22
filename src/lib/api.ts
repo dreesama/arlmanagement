@@ -32,7 +32,7 @@ async function token(): Promise<string> {
     s = { ...refreshed, expires_at: Math.floor(Date.now()/1000) + refreshed.expires_in };
     saveSession(s);
   }
-  return s.access_token;
+  return s!.access_token;
 }
 async function request<T>(resource: string, init: RequestInit = {}, options: { prefer?: string } = {}): Promise<T> {
   const access = await token();
