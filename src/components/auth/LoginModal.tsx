@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Lock, User as UserIcon, ShieldCheck, AlertCircle } from 'lucide-react';
+import { Lock, User as UserIcon, AlertCircle } from 'lucide-react';
 import { User } from '../../types';
 import { api } from '../../lib/api';
 import { Logo } from '../ui/Logo';
@@ -9,8 +9,9 @@ interface LoginModalProps {
 }
 
 export const LoginModal: React.FC<LoginModalProps> = ({ onLoginSuccess }) => {
-  const [username, setUsername] = useState('admin');
-  const [password, setPassword] = useState('admin123');
+  const [username, setUsername] = useState('');
+  const [registering, setRegistering] = useState(false);
+  const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
@@ -20,10 +21,14 @@ export const LoginModal: React.FC<LoginModalProps> = ({ onLoginSuccess }) => {
     setLoading(true);
 
     try {
-      const res = await api.login({ username, password });
-      if (res.success) {
-        onLoginSuccess(res.user);
+      if (registering) {
+        const result = await api.register(username, password);
+        setError(result.message);
+        setRegistering(false);
+        return;
       }
+      const res = await api.login({ username, password });
+      if (res.success) onLoginSuccess(res.user);
     } catch (err: any) {
       setError(err.message || 'Invalid username or password');
     } finally {
@@ -46,7 +51,7 @@ export const LoginModal: React.FC<LoginModalProps> = ({ onLoginSuccess }) => {
         <form onSubmit={handleSubmit} className="p-6 space-y-5">
           <div className="space-y-1">
             <h2 className="text-base font-bold text-[#1C1B18]">Welcome Back</h2>
-            <p className="text-xs text-[#6E6B65] font-medium">Please authenticate to access system dashboard.</p>
+            <p className="text-xs text-[#6E6B65] font-medium">Only approved hotel administrators may access this dashboard.</p>
           </div>
 
           {error && (
@@ -62,12 +67,13 @@ export const LoginModal: React.FC<LoginModalProps> = ({ onLoginSuccess }) => {
               <div className="relative">
                 <UserIcon className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-[#6E6B65]" />
                 <input
-                  type="text"
+                  type="email"
                   required
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
                   className="w-full pl-9 pr-3 py-2 zen-input text-xs text-[#1C1B18] placeholder-[#6E6B65]"
-                  placeholder="admin"
+                  placeholder="Your approved admin email"
+                  autoComplete="email"
                 />
               </div>
             </div>
@@ -82,26 +88,25 @@ export const LoginModal: React.FC<LoginModalProps> = ({ onLoginSuccess }) => {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   className="w-full pl-9 pr-3 py-2 zen-input text-xs text-[#1C1B18] placeholder-[#6E6B65]"
-                  placeholder="••••••••"
+                  placeholder="Password"
+                  minLength={6}
+                  autoComplete={registering ? 'new-password' : 'current-password'}
                 />
               </div>
             </div>
           </div>
 
-          <div className="p-3 bg-[#F5F2EC] rounded-xl border border-[#E5E0D8] text-[11px] text-[#6E6B65] space-y-1">
-            <div className="font-bold text-[#1C1B18] flex items-center gap-1">
-              <ShieldCheck className="w-3.5 h-3.5 text-[#C84B31]" /> Default Credentials:
-            </div>
-            <div>Username: <code className="text-[#C84B31] bg-white px-1.5 py-0.5 rounded border border-[#E5E0D8] font-mono">admin</code></div>
-            <div>Password: <code className="text-[#C84B31] bg-white px-1.5 py-0.5 rounded border border-[#E5E0D8] font-mono">admin123</code></div>
-          </div>
+          <p className="text-[11px] text-[#6E6B65]">Sign in with your approved administrator email and a personal password. Default credentials are disabled.</p>
 
           <button
             type="submit"
             disabled={loading}
             className="w-full py-2.5 px-4 zen-btn-primary font-bold text-xs rounded-xl shadow-xs transition-all flex items-center justify-center gap-2 disabled:opacity-50"
           >
-            {loading ? 'Authenticating...' : 'Sign In to Dashboard'}
+            {loading ? 'Processing...' : registering ? 'Register Administrator Account' : 'Sign In to Dashboard'}
+          </button>
+          <button type="button" onClick={() => { setRegistering(!registering); setError(''); }} className="w-full text-xs text-[#6E6B65] underline">
+            {registering ? 'Already registered? Sign in' : 'First time? Register with an approved email'}
           </button>
         </form>
       </div>
