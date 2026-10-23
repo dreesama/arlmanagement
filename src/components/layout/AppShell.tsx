@@ -15,17 +15,12 @@ import { CustomCursor } from '../ui/CustomCursor';
 export const AppShell: React.FC = () => {
   const [activeTab, setActiveTab] = useState<string>('dashboard');
   const [sidebarCollapsed, setSidebarCollapsed] = useState<boolean>(false);
-  const currentUser: User = { id: 0, username: 'demo', fullName: 'Demo Tester', role: 'Admin' };
+  const currentUser: User = { id: 0, username: 'admin', fullName: 'Administrator', role: 'Admin' };
 
   return (
     <div className="h-screen bg-[#F5F2EC] text-[#1C1B18] flex flex-col font-sans overflow-hidden select-none">
       {/* Japandi Custom 3D Interactive Mouse Cursor */}
       <CustomCursor />
-
-      {/* Public demonstration: no account or sign-in required */}
-      <div className="px-3 py-1.5 text-center bg-[#EBF5EF] text-[#2D5A39] text-[11px] font-semibold border-b border-[#BCE3C8]">
-        SIMULATION MODE — demo data only · Changes are shared with other testers
-      </div>
 
       {/* Japandi 3-Panel Layout Container */}
       {(
