@@ -1,45 +1,15 @@
 import type { Room, Guest, Reservation, Billing, DashboardStats } from '../types';
 
-// The publishable key is safe for the browser. Supabase RLS, not this key,
-// protects hotel records. Do not ever put a service_role/secret key here.
+// Public, fake-data-only demonstration database. No authentication is required.
+// NEVER point this frontend at a database containing real hotel/customer records.
 const URL = import.meta.env.VITE_SUPABASE_URL || 'https://pttbuvsznkrifvtbbpkf.supabase.co';
 const KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY || 'sb_publishable_YMIT-OWTbo-8Ay12rjKTlg_AUgNUi_l';
-const SESSION_KEY = 'arl_supabase_session';
-type Session = { access_token: string; refresh_token: string; expires_at?: number; user?: { id: string; email?: string } };
 
-function readSession(): Session | null {
-  try { return JSON.parse(sessionStorage.getItem(SESSION_KEY) || 'null'); }
-  catch { return null; }
-}
-function saveSession(s: Session | null) {
-  if (s) sessionStorage.setItem(SESSION_KEY, JSON.stringify(s));
-  else sessionStorage.removeItem(SESSION_KEY);
-}
-async function authRequest(endpoint: string, body: object) {
-  const res = await fetch(URL + '/auth/v1/' + endpoint, {
-    method: 'POST', headers: { apikey: KEY, 'Content-Type': 'application/json' },
-    body: JSON.stringify(body)
-  });
-  const data = await res.json().catch(() => ({}));
-  if (!res.ok) throw new Error(data.msg || data.error_description || data.message || 'Authentication failed');
-  return data;
-}
-async function token(): Promise<string> {
-  let s = readSession();
-  if (!s) throw new Error('Please sign in again.');
-  if (s.expires_at && s.expires_at < Date.now()/1000 + 60) {
-    const refreshed = await authRequest('token?grant_type=refresh_token', { refresh_token: s.refresh_token });
-    s = { ...refreshed, expires_at: Math.floor(Date.now()/1000) + refreshed.expires_in };
-    saveSession(s);
-  }
-  return s!.access_token;
-}
 async function request<T>(resource: string, init: RequestInit = {}, options: { prefer?: string } = {}): Promise<T> {
-  const access = await token();
   const res = await fetch(URL + '/rest/v1/' + resource, {
     ...init,
     headers: {
-      apikey: KEY, Authorization: 'Bearer ' + access,
+      apikey: KEY,
       'Content-Type': 'application/json',
       ...(options.prefer ? { Prefer: options.prefer } : {}),
       ...init.headers
@@ -97,37 +67,6 @@ async function rpc<T>(name: string, args: object = {}): Promise<T> {
   return request<T>('rpc/' + name, {method:'POST',body:JSON.stringify(args)});
 }
 export const api = {
-  async login(credentials: { username: string; password: string }) {
-    const email = credentials.username.trim().toLowerCase();
-    if (!email.includes('@')) throw new Error('Use your authorized administrator email address.');
-    const auth = await authRequest('token?grant_type=password', { email, password:credentials.password });
-    const s: Session = { ...auth, expires_at: Math.floor(Date.now()/1000)+auth.expires_in };
-    saveSession(s);
-    try {
-      const allowed = await rpc<boolean>('is_authorized_admin');
-      if (!allowed) throw new Error('Your email has not been approved as a hotel administrator.');
-      return { success: true, user: { id: 1, username:email, fullName:email, role:'Admin' as const } };
-    } catch(e) { saveSession(null); throw e; }
-  },
-  async register(email: string, password: string) {
-    await authRequest('signup', { email:email.toLowerCase().trim(),password });
-    return {message:'Account registration submitted. Check your email for confirmation, then sign in.'};
-  },
-  async restoreSession() {
-    if (!readSession()) return null;
-    try {
-      const allowed = await rpc<boolean>('is_authorized_admin');
-      if (!allowed) {saveSession(null);return null;}
-      const s=readSession();
-      const email=s?.user?.email || 'admin';
-      return { id:1,username:email,fullName:email,role:'Admin' as const };
-    }catch{return null;}
-  },
-  async logout() {
-    const s=readSession();
-    if(s){try{await fetch(URL+'/auth/v1/logout',{method:'POST',headers:{apikey:KEY,Authorization:'Bearer '+s.access_token}});}catch{/*clear locally*/}}
-    saveSession(null);
-  },
   async getRooms(): Promise<Room[]> { return (await request<any[]>(order('rooms','number',true))).map(fixRoom); },
   async createRoom(room: Partial<Room>): Promise<Room> {return fixRoom(await insert('rooms',room));},
   async updateRoom(id: number,room:Partial<Room>):Promise<Room>{return fixRoom(await update('rooms',id,room));},
