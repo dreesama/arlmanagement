@@ -134,3 +134,39 @@ end $$;
 revoke all on function public.record_hotel_payment(bigint,numeric,text,text,text) from public,anon;
 grant execute on function public.record_hotel_payment(bigint,numeric,text,text,text) to authenticated, anon;
 
+
+-- Enable booking RPC for unauthenticated simulator visitors.
+create or replace function public.create_hotel_reservation(
+ p_guest_id bigint, p_room_id bigint, p_checkin text, p_checkout text,
+ p_nights integer, p_adults integer, p_children integer, p_special text default ''
+) returns bigint language plpgsql security invoker set search_path = ''
+as $$
+declare r public.rooms%rowtype; rid bigint; bid bigint; total numeric(12,2); invoice text;
+begin
+ -- Simulation only: no account required; operate on fake data.
+ if p_nights < 1 or p_adults < 0 or p_children < 0 or p_checkout <= p_checkin then raise exception 'Invalid reservation dates or guests'; end if;
+ select * into r from public.rooms where id = p_room_id for update;
+ if not found or r.status <> 'Available' then raise exception 'Room is not available'; end if;
+ total := r."ratePerNight" * p_nights;
+ insert into public.reservations (
+  "reservationCode","guestId","roomId","checkInDate","checkOutDate",
+  nights,adults,children,status,"totalAmount","specialRequests","createdAt")
+ values (
+  'ARL-'||extract(year from now())::text||'-'||upper(substr(replace(gen_random_uuid()::text,'-',''),1,10)),
+  p_guest_id,p_room_id,p_checkin,p_checkout,p_nights,p_adults,p_children,
+  'Confirmed',total,coalesce(p_special,''),to_char(now() at time zone 'UTC','YYYY-MM-DD'))
+ returning id into rid;
+ update public.rooms set status = 'Reserved' where id = p_room_id;
+ invoice := 'INV-'||extract(year from now())::text||'-'||upper(substr(replace(gen_random_uuid()::text,'-',''),1,10));
+ insert into public.billings ("invoiceNumber","reservationId","roomCharges",subtotal,"taxAmount","serviceCharge",
+   "grandTotal","balanceAmount",status,"createdAt")
+ values (invoice,rid,total,total,round(total*0.12,2),round(total*0.10,2),
+   round(total*1.22,2),round(total*1.22,2),'Unpaid',to_char(now() at time zone 'UTC','YYYY-MM-DD'))
+ returning id into bid;
+ insert into public.billing_items ("billingId",description,quantity,"unitPrice",amount)
+ values(bid, 'Room Charge (Room '||r.number||' - '||p_nights||' Night/s)',p_nights,r."ratePerNight",total);
+ return rid;
+end $$;
+revoke all on function public.create_hotel_reservation(bigint,bigint,text,text,integer,integer,integer,text) from public, anon;
+grant execute on function public.create_hotel_reservation(bigint,bigint,text,text,integer,integer,integer,text) to authenticated, anon;
+
