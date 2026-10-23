@@ -93,10 +93,10 @@ export const Sidebar: React.FC<SidebarProps> = ({
         })}
       </div>
 
-      {/* Shared demonstration identity — no authentication */}
+      {/* User footer */}
       <div className="p-3 border-t border-[#E5E0D8] bg-[#F5F2EC]/50">
-        <div className="text-xs font-bold text-[#1C1B18]">{collapsed ? 'Demo' : (currentUser?.fullName || 'Demo Tester')}</div>
-        {!collapsed && <div className="text-[10px] text-[#6E6B65]">Public simulation · No sign-in</div>}
+        <div className="text-xs font-bold text-[#1C1B18]">{collapsed ? 'A' : (currentUser?.fullName || 'Administrator')}</div>
+        {!collapsed && <div className="text-[10px] text-[#6E6B65]">Hotel Management</div>}
       </div>
     </aside>
   );
